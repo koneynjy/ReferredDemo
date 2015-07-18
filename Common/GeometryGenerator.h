@@ -16,6 +16,7 @@
 #define GEOMETRYGENERATOR_H
 
 #include "d3dUtil.h"
+#include "Camera.h"
 
 class GeometryGenerator
 {
@@ -80,6 +81,8 @@ public:
 	/// postprocessing effects.
 	///</summary>
 	void CreateFullscreenQuad(MeshData& meshData);
+
+	void CreateFarPlaneQuad(MeshData& meshData, Camera &camera);
 
 private:
 	void Subdivide(MeshData& meshData);

@@ -9,6 +9,7 @@ public:
 	DeferredShading(ID3D11Device* device, UINT width, UINT height);
 	~DeferredShading();
 
+	void InitQuad(Camera &camera, ID3D11Device* device);
 	void SetMRT(ID3D11DeviceContext* dc);
 	UINT mWidth;
 	UINT mHeight;
@@ -21,6 +22,10 @@ public:
 	ID3D11RenderTargetView* mGBufferRTV0;
 	ID3D11RenderTargetView* mGBufferRTV1;
 	ID3D11DepthStencilView* mDepthMapDSV;
+
+	ID3D11Buffer* mVB;
+	ID3D11Buffer* mIB;
+	UINT mIndexCount;
 	
 };
 

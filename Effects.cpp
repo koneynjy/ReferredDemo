@@ -314,6 +314,7 @@ SsaoEffect::SsaoEffect(ID3D11Device* device, const std::wstring& filename)
 	: Effect(device, filename)
 {
 	SsaoTech           = mFX->GetTechniqueByName("Ssao");
+	SsaoDeferred	   = mFX->GetTechniqueByName("SsaoDeferred");
 
 	ViewToTexSpace     = mFX->GetVariableByName("gViewToTexSpace")->AsMatrix();
 	OffsetVectors      = mFX->GetVariableByName("gOffsetVectors")->AsVector();
@@ -325,6 +326,8 @@ SsaoEffect::SsaoEffect(ID3D11Device* device, const std::wstring& filename)
 
 	NormalDepthMap     = mFX->GetVariableByName("gNormalDepthMap")->AsShaderResource();
 	RandomVecMap       = mFX->GetVariableByName("gRandomVecMap")->AsShaderResource();
+	DepthMap		   = mFX->GetVariableByName("gDepthMap")->AsShaderResource();
+	GBuffer0		   = mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 }
 
 SsaoEffect::~SsaoEffect()
@@ -374,6 +377,7 @@ GBufferEffect::GBufferEffect(ID3D11Device* device, const std::wstring& filename)
 	GBufferTech				= mFX->GetTechniqueByName("GBufferTech");
 	GBufferTechSkinned		= mFX->GetTechniqueByName("GBufferTechSkinned");
 	GBufferTechBase			= mFX->GetTechniqueByName("GBufferTechBase");
+	GBufferTechBaseReflect  = mFX->GetTechniqueByName("GBufferTechBaseReflect");	
 
 	WorldViewProj			= mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
 	World					= mFX->GetVariableByName("gWorld")->AsMatrix();
@@ -382,14 +386,39 @@ GBufferEffect::GBufferEffect(ID3D11Device* device, const std::wstring& filename)
 	Mat						= mFX->GetVariableByName("gMaterial");
 	FarClipDist				= mFX->GetVariableByName("gFarClipDist")->AsScalar();
 	BoneTransforms			= mFX->GetVariableByName("gBoneTransforms")->AsMatrix();
+	EyePosW					= mFX->GetVariableByName("gEyePosW")->AsVector();
 
 	DiffuseMap				= mFX->GetVariableByName("gDiffuseMap")->AsShaderResource();
 	NormalMap				= mFX->GetVariableByName("gNormalMap")->AsShaderResource();
+	CubeMap					= mFX->GetVariableByName("gCubeMap")->AsShaderResource();
 }
 
 GBufferEffect::~GBufferEffect()
 {
 }
+
+#pragma endregion
+
+#pragma region DEFERREDSHADING
+DeferredShadingEffect::DeferredShadingEffect(ID3D11Device* device, const std::wstring& filename)
+	:Effect(device, filename)
+{
+	DeferredShadingTech		= mFX->GetTechniqueByName("DeferredShadingTech");
+
+	ViewInv					= mFX->GetVariableByName("gViewInv")->AsMatrix();
+	ShadowTransform			= mFX->GetVariableByName("gShadowTransform")->AsMatrix();
+	DirLights				= mFX->GetVariableByName("gDirLights");
+	EyePosW					= mFX->GetVariableByName("gEyePosW")->AsVector();
+	amb						= mFX->GetVariableByName("amb")->AsVector();
+
+	ShadowMap				= mFX->GetVariableByName("gShadowMap")->AsShaderResource();
+	SsaoMap					= mFX->GetVariableByName("gSsaoMap")->AsShaderResource();
+	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
+	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
+	GBuffer1				= mFX->GetVariableByName("gGBuffer1")->AsShaderResource();
+}
+
+DeferredShadingEffect::~DeferredShadingEffect(){}
 
 #pragma endregion
 
@@ -425,6 +454,7 @@ SsaoBlurEffect*        Effects::SsaoBlurFX        = 0;
 SkyEffect*             Effects::SkyFX             = 0;
 DebugTexEffect*        Effects::DebugTexFX        = 0;
 GBufferEffect*		   Effects::GBufferFX         = 0;
+DeferredShadingEffect* Effects::DeferredShadingFX = 0;
 
 void Effects::InitAll(ID3D11Device* device)
 {
@@ -437,6 +467,7 @@ void Effects::InitAll(ID3D11Device* device)
 	SkyFX             = new SkyEffect(device, L"FX/Sky.fxo");
 	DebugTexFX        = new DebugTexEffect(device, L"FX/DebugTexture.fxo");
 	GBufferFX         = new GBufferEffect(device, L"FX/GBuffer.fxo");
+	DeferredShadingFX = new DeferredShadingEffect(device, L"FX/DeferredShading.fxo");
 }
 
 void Effects::DestroyAll()

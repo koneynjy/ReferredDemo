@@ -77,9 +77,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(DXSDK_DIR)Include;Common;$(IncludePath);</IncludePath>
-    <LibraryPath>$(DXSDK_DIR)Lib\x86;$(LibraryPath);</LibraryPath>
-    <ExecutablePath>$(DXSDK_DIR)Utilities\bin\x86;$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
+    <IncludePath>$(DXSDK_DIR)\Include;Common;$(IncludePath);</IncludePath>
+    <LibraryPath>$(DXSDK_DIR)\Lib\x86;$(LibraryPath);</LibraryPath>
+    <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>

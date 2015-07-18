@@ -42,6 +42,9 @@ public:
 	/// are disabled, as we do not need the depth buffer computing the Ambient map.
 	///</summary>
 	void ComputeSsao(const Camera& camera);
+	void ComputeSsaoDeferred(const Camera& camera, 
+		ID3D11ShaderResourceView* depthMap,
+		ID3D11ShaderResourceView* gBuffer0);
 
 	///<summary>
 	/// Blurs the ambient map to smooth out the noise caused by only taking a

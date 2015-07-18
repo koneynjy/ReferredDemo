@@ -616,3 +616,44 @@ void GeometryGenerator::CreateFullscreenQuad(MeshData& meshData)
 	meshData.Indices[4] = 2;
 	meshData.Indices[5] = 3;
 }
+
+void GeometryGenerator::CreateFarPlaneQuad(MeshData& meshData, Camera &camera)
+{
+	meshData.Vertices.resize(4);
+	meshData.Indices.resize(6);
+	float farZ = camera.GetFarZ();
+	float halfW = camera.GetFarWindowWidth() * 0.5f;
+	float halfH = camera.GetFarWindowHeight() * 0.5f;
+
+	meshData.Vertices[0] = Vertex(
+		-halfW, -halfH, farZ,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		0.0f, 1.0f);
+
+	meshData.Vertices[1] = Vertex(
+		-halfW, +halfH, farZ,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		0.0f, 0.0f);
+
+	meshData.Vertices[2] = Vertex(
+		+halfW, +halfH, farZ,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 0.0f);
+
+	meshData.Vertices[3] = Vertex(
+		+halfW, -halfH, farZ,
+		0.0f, 0.0f, -1.0f,
+		1.0f, 0.0f, 0.0f,
+		1.0f, 1.0f);
+
+	meshData.Indices[0] = 0;
+	meshData.Indices[1] = 1;
+	meshData.Indices[2] = 2;
+
+	meshData.Indices[3] = 0;
+	meshData.Indices[4] = 2;
+	meshData.Indices[5] = 3;
+}

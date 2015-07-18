@@ -381,9 +381,12 @@ public:
 	void SetSurfaceEpsilon(float f)                        { SurfaceEpsilon->SetFloat(f); }
 
 	void SetNormalDepthMap(ID3D11ShaderResourceView* srv)  { NormalDepthMap->SetResource(srv); }
+	void SetDepthMap(ID3D11ShaderResourceView* srv)		   { DepthMap->SetResource(srv); }
+	void SetGBuffer0(ID3D11ShaderResourceView* srv)		   { GBuffer0->SetResource(srv); }
 	void SetRandomVecMap(ID3D11ShaderResourceView* srv)    { RandomVecMap->SetResource(srv); }
 
 	ID3DX11EffectTechnique* SsaoTech;
+	ID3DX11EffectTechnique* SsaoDeferred;
 
 	ID3DX11EffectMatrixVariable* ViewToTexSpace;
 	ID3DX11EffectVectorVariable* OffsetVectors;
@@ -395,6 +398,8 @@ public:
 
 	ID3DX11EffectShaderResourceVariable* NormalDepthMap;
 	ID3DX11EffectShaderResourceVariable* RandomVecMap;
+	ID3DX11EffectShaderResourceVariable* DepthMap;
+	ID3DX11EffectShaderResourceVariable* GBuffer0;
 };
 #pragma endregion
 
@@ -453,14 +458,17 @@ public:
 	void SetTexTransform(CXMMATRIX M)                   { TexTransform->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetFarClipDist(float f)						{ FarClipDist->SetFloat(f); }
 	void SetBoneTransforms(const XMFLOAT4X4* M, int cnt){ BoneTransforms->SetMatrixArray(reinterpret_cast<const float*>(M), 0, cnt); }
+	void SetEyePosW(const XMFLOAT3& v)                  { EyePosW->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
 
 	void SetMaterial(const Material& mat)               { Mat->SetRawValue(&mat, 0, sizeof(Material)); }
 	void SetDiffuseMap(ID3D11ShaderResourceView* tex)   { DiffuseMap->SetResource(tex); }
 	void SetNormalMap(ID3D11ShaderResourceView* tex)    { NormalMap->SetResource(tex); }
+	void SetCubeMap(ID3D11ShaderResourceView* tex)      { CubeMap->SetResource(tex); }
 
 	ID3DX11EffectTechnique* GBufferTech;
 	ID3DX11EffectTechnique* GBufferTechSkinned;
 	ID3DX11EffectTechnique* GBufferTechBase;
+	ID3DX11EffectTechnique* GBufferTechBaseReflect;
 
 	ID3DX11EffectMatrixVariable* WorldViewProj;
 	ID3DX11EffectMatrixVariable* World;
@@ -469,9 +477,48 @@ public:
 	ID3DX11EffectVariable* Mat;
 	ID3DX11EffectScalarVariable* FarClipDist;
 	ID3DX11EffectMatrixVariable* BoneTransforms;
+	ID3DX11EffectVectorVariable* EyePosW;
 
 	ID3DX11EffectShaderResourceVariable* DiffuseMap;
 	ID3DX11EffectShaderResourceVariable* NormalMap;
+	ID3DX11EffectShaderResourceVariable* CubeMap;
+};
+
+#pragma endregion
+
+#pragma region DEFERREDSHADING
+
+class DeferredShadingEffect : public Effect
+{
+public:
+	DeferredShadingEffect(ID3D11Device* device, const std::wstring& filename);
+	~DeferredShadingEffect();
+
+	void SetViewInv(CXMMATRIX M)						{ ViewInv->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetShadowTransform(CXMMATRIX M)                { ShadowTransform->SetMatrix(reinterpret_cast<const float*>(&M)); }
+
+	void SetEyePosW(const XMFLOAT3& v)                  { EyePosW->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
+	void SetDirLights(const DirectionalLight* lights)   { DirLights->SetRawValue(lights, 0, 3 * sizeof(DirectionalLight)); }
+	void SetAmb(const XMFLOAT4& v)						{ amb->SetRawValue(&v, 0, sizeof(XMFLOAT4)); }
+	void SetSsaoMap(ID3D11ShaderResourceView* tex)      { SsaoMap->SetResource(tex); }
+	void SetShadowMap(ID3D11ShaderResourceView* tex)    { ShadowMap->SetResource(tex); }
+	void SetDepthMap(ID3D11ShaderResourceView* tex)		{ DepthMap->SetResource(tex); }
+	void SetGBuffer0(ID3D11ShaderResourceView* tex)		{ GBuffer0->SetResource(tex); }
+	void SetGBuffer1(ID3D11ShaderResourceView* tex)		{ GBuffer1->SetResource(tex); }
+
+	ID3DX11EffectTechnique* DeferredShadingTech;
+
+	ID3DX11EffectMatrixVariable* ViewInv;
+	ID3DX11EffectMatrixVariable* ShadowTransform;
+	ID3DX11EffectVariable* DirLights;
+	ID3DX11EffectVectorVariable* EyePosW;
+	ID3DX11EffectVectorVariable* amb;
+
+	ID3DX11EffectShaderResourceVariable* ShadowMap;
+	ID3DX11EffectShaderResourceVariable* SsaoMap;
+	ID3DX11EffectShaderResourceVariable* DepthMap;
+	ID3DX11EffectShaderResourceVariable* GBuffer0;
+	ID3DX11EffectShaderResourceVariable* GBuffer1;
 };
 
 #pragma endregion
@@ -514,6 +561,7 @@ public:
 	static SkyEffect* SkyFX;
 	static DebugTexEffect* DebugTexFX;
 	static GBufferEffect* GBufferFX;
+	static DeferredShadingEffect* DeferredShadingFX;
 };
 #pragma endregion
 

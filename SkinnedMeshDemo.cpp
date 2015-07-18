@@ -55,6 +55,8 @@ private:
 	void DrawScreenQuad(ID3D11ShaderResourceView* srv);
 	void BuildShadowTransform();
 	void BuildGBuffer();
+	void DeferredShadingPass();
+	void ForwardShadingPass();
 	void BuildShapeGeometryBuffers();
 	void BuildSkullGeometryBuffers();
 	void BuildScreenQuadGeometryBuffers();
@@ -282,7 +284,6 @@ bool SkinnedMeshApp::Init()
 
 	mSky  = new Sky(md3dDevice, L"Textures/desertcube1024.dds", 5000.0f);
 	mSmap = new ShadowMap(md3dDevice, SMapSize, SMapSize);
-	mDeferred = new DeferredShading(md3dDevice, mClientWidth, mClientHeight);
 
 	mCam.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
 	mSsao = new Ssao(md3dDevice, md3dImmediateContext, mClientWidth, mClientHeight, mCam.GetFovY(), mCam.GetFarZ());
@@ -315,6 +316,9 @@ bool SkinnedMeshApp::Init()
 	modelOffset = XMMatrixTranslation(2.0f, 0.0f, -7.0f);
 	XMStoreFloat4x4(&mCharacterInstance2.World, modelScale*modelRot*modelOffset);
 	
+	mDeferred = new DeferredShading(md3dDevice, mClientWidth, mClientHeight);
+	mDeferred->InitQuad(mCam, md3dDevice);
+
 	return true;
 }
 
@@ -365,12 +369,47 @@ void SkinnedMeshApp::UpdateScene(float dt)
 
 void SkinnedMeshApp::DrawScene()
 {
+	ForwardShadingPass();
+}
+
+#pragma region MOUSEEVENT
+
+void SkinnedMeshApp::OnMouseDown(WPARAM btnState, int x, int y)
+{
+	mLastMousePos.x = x;
+	mLastMousePos.y = y;
+
+	SetCapture(mhMainWnd);
+}
+
+void SkinnedMeshApp::OnMouseUp(WPARAM btnState, int x, int y)
+{
+	ReleaseCapture();
+}
+
+void SkinnedMeshApp::OnMouseMove(WPARAM btnState, int x, int y)
+{
+	if( (btnState & MK_LBUTTON) != 0 )
+	{
+		// Make each pixel correspond to a quarter of a degree.
+		float dx = XMConvertToRadians(0.25f*static_cast<float>(x - mLastMousePos.x));
+		float dy = XMConvertToRadians(0.25f*static_cast<float>(y - mLastMousePos.y));
+
+		mCam.Pitch(dy);
+		mCam.RotateY(dx);
+	}
+
+	mLastMousePos.x = x;
+	mLastMousePos.y = y;
+}
+
+#pragma endregion
+
+void SkinnedMeshApp::ForwardShadingPass()
+{
 	//
 	// Render the scene to the shadow map.
 	//
-
-	mDeferred->SetMRT(md3dImmediateContext);
-	BuildGBuffer();
 
 	mSmap->BindDsvAndSetNullRenderTarget(md3dImmediateContext);
 
@@ -385,10 +424,10 @@ void SkinnedMeshApp::DrawScene()
 	// Notice that we use the main depth/stencil buffer in this pass.  
 	//
 
-	md3dImmediateContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
+	md3dImmediateContext->ClearDepthStencilView(mDepthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 	md3dImmediateContext->RSSetViewports(1, &mScreenViewport);
 	mSsao->SetNormalDepthRenderTarget(mDepthStencilView);
-	
+
 	DrawSceneToSsaoNormalDepthMap();
 
 	//
@@ -401,7 +440,7 @@ void SkinnedMeshApp::DrawScene()
 	//
 	// Restore the back and depth buffer and viewport to the OM stage.
 	//
-	ID3D11RenderTargetView* renderTargets[1] = {mRenderTargetView};
+	ID3D11RenderTargetView* renderTargets[1] = { mRenderTargetView };
 	md3dImmediateContext->OMSetRenderTargets(1, renderTargets, mDepthStencilView);
 	md3dImmediateContext->RSSetViewports(1, &mScreenViewport);
 
@@ -413,12 +452,12 @@ void SkinnedMeshApp::DrawScene()
 	// comparison test.
 
 	md3dImmediateContext->OMSetDepthStencilState(RenderStates::EqualsDSS, 0);
- 
-	XMMATRIX view     = mCam.View();
-	XMMATRIX proj     = mCam.Proj();
+
+	XMMATRIX view = mCam.View();
+	XMMATRIX proj = mCam.Proj();
 	XMMATRIX viewProj = mCam.ViewProj();
 
-	float blendFactor[] = {0.0f, 0.0f, 0.0f, 0.0f};
+	float blendFactor[] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 	// Set per frame constants.
 	Effects::BasicFX->SetDirLights(mDirLights);
@@ -434,9 +473,9 @@ void SkinnedMeshApp::DrawScene()
 	Effects::NormalMapFX->SetSsaoMap(mSsao->AmbientSRV());
 
 	// Figure out which technique to use for different geometry.
-	ID3DX11EffectTechnique* activeTech        = Effects::NormalMapFX->Light3TexTech;
-	ID3DX11EffectTechnique* activeSphereTech  = Effects::BasicFX->Light3ReflectTech;
-	ID3DX11EffectTechnique* activeSkullTech   = Effects::BasicFX->Light3ReflectTech;
+	ID3DX11EffectTechnique* activeTech = Effects::NormalMapFX->Light3TexTech;
+	ID3DX11EffectTechnique* activeSphereTech = Effects::BasicFX->Light3ReflectTech;
+	ID3DX11EffectTechnique* activeSkullTech = Effects::BasicFX->Light3ReflectTech;
 	ID3DX11EffectTechnique* activeSkinnedTech = Effects::NormalMapFX->Light3TexSkinnedTech;
 
 	md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
@@ -458,21 +497,21 @@ void SkinnedMeshApp::DrawScene()
 	//
 	// Draw the grid, cylinders, and box without any cubemap reflection.
 	// 
-	
+
 	UINT stride = sizeof(Vertex::PosNormalTexTan);
-    UINT offset = 0;
+	UINT offset = 0;
 
 	md3dImmediateContext->IASetInputLayout(InputLayouts::PosNormalTexTan);
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mShapesVB, &stride, &offset);
 	md3dImmediateContext->IASetIndexBuffer(mShapesIB, DXGI_FORMAT_R32_UINT, 0);
-     
-	if( GetAsyncKeyState('1') & 0x8000 )
+
+	if (GetAsyncKeyState('1') & 0x8000)
 		md3dImmediateContext->RSSetState(RenderStates::WireframeRS);
-	
-    D3DX11_TECHNIQUE_DESC techDesc;
-    activeTech->GetDesc( &techDesc );
-    for(UINT p = 0; p < techDesc.Passes; ++p)
-    {
+
+	D3DX11_TECHNIQUE_DESC techDesc;
+	activeTech->GetDesc(&techDesc);
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
 		// Draw the grid.
 		world = XMLoadFloat4x4(&mGridWorld);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
@@ -510,7 +549,7 @@ void SkinnedMeshApp::DrawScene()
 		md3dImmediateContext->DrawIndexed(mBoxIndexCount, mBoxIndexOffset, mBoxVertexOffset);
 
 		// Draw the cylinders.
-		for(int i = 0; i < 10; ++i)
+		for (int i = 0; i < 10; ++i)
 		{
 			world = XMLoadFloat4x4(&mCylWorld[i]);
 			worldInvTranspose = MathHelper::InverseTranspose(world);
@@ -525,24 +564,24 @@ void SkinnedMeshApp::DrawScene()
 			Effects::NormalMapFX->SetMaterial(mCylinderMat);
 			Effects::NormalMapFX->SetDiffuseMap(mBrickTexSRV);
 			Effects::NormalMapFX->SetNormalMap(mBrickNormalTexSRV);
- 
+
 			activeTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 			md3dImmediateContext->DrawIndexed(mCylinderIndexCount, mCylinderIndexOffset, mCylinderVertexOffset);
 		}
-    }
+	}
 
 	//
 	// Draw the spheres with cubemap reflection.
 	//
- 
+
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mShapesVB, &stride, &offset);
 	md3dImmediateContext->IASetIndexBuffer(mShapesIB, DXGI_FORMAT_R32_UINT, 0);
 
-	activeSphereTech->GetDesc( &techDesc );
-	for(UINT p = 0; p < techDesc.Passes; ++p)
-    {
+	activeSphereTech->GetDesc(&techDesc);
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
 		// Draw the spheres.
-		for(int i = 0; i < 10; ++i)
+		for (int i = 0; i < 10; ++i)
 		{
 			world = XMLoadFloat4x4(&mSphereWorld[i]);
 			worldInvTranspose = MathHelper::InverseTranspose(world);
@@ -555,22 +594,22 @@ void SkinnedMeshApp::DrawScene()
 			Effects::BasicFX->SetShadowTransform(world*shadowTransform);
 			Effects::BasicFX->SetTexTransform(XMMatrixIdentity());
 			Effects::BasicFX->SetMaterial(mSphereMat);
- 
+
 			activeSphereTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 			md3dImmediateContext->DrawIndexed(mSphereIndexCount, mSphereIndexOffset, mSphereVertexOffset);
 		}
 	}
 
 	stride = sizeof(Vertex::Basic32);
-    offset = 0;
+	offset = 0;
 
 	md3dImmediateContext->IASetInputLayout(InputLayouts::Basic32);
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mSkullVB, &stride, &offset);
 	md3dImmediateContext->IASetIndexBuffer(mSkullIB, DXGI_FORMAT_R32_UINT, 0);
 
-	activeSkullTech->GetDesc( &techDesc );
-	for(UINT p = 0; p < techDesc.Passes; ++p)
-    {
+	activeSkullTech->GetDesc(&techDesc);
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
 		// Draw the skull.
 		world = XMLoadFloat4x4(&mSkullWorld);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
@@ -582,7 +621,7 @@ void SkinnedMeshApp::DrawScene()
 		Effects::BasicFX->SetWorldViewProjTex(worldViewProj*toTexSpace);
 		Effects::BasicFX->SetMaterial(mSkullMat);
 		Effects::BasicFX->SetShadowTransform(world*shadowTransform);
-	 
+
 		activeSkullTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(mSkullIndexCount, 0, 0);
 	}
@@ -593,9 +632,9 @@ void SkinnedMeshApp::DrawScene()
 
 	md3dImmediateContext->IASetInputLayout(InputLayouts::PosNormalTexTanSkinned);
 
-	activeSkinnedTech->GetDesc( &techDesc );
-	for(UINT p = 0; p < techDesc.Passes; ++p)
-    {
+	activeSkinnedTech->GetDesc(&techDesc);
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
 		// Instance 1
 
 		world = XMLoadFloat4x4(&mCharacterInstance1.World);
@@ -609,10 +648,10 @@ void SkinnedMeshApp::DrawScene()
 		Effects::NormalMapFX->SetShadowTransform(world*shadowTransform);
 		Effects::NormalMapFX->SetTexTransform(XMMatrixScaling(1.0f, 1.0f, 1.0f));
 		Effects::NormalMapFX->SetBoneTransforms(
-			&mCharacterInstance1.FinalTransforms[0], 
+			&mCharacterInstance1.FinalTransforms[0],
 			mCharacterInstance1.FinalTransforms.size());
 
-		for(UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
+		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
 		{
 			Effects::NormalMapFX->SetMaterial(mCharacterInstance1.Model->Mat[subset]);
 			Effects::NormalMapFX->SetDiffuseMap(mCharacterInstance1.Model->DiffuseMapSRV[subset]);
@@ -634,12 +673,12 @@ void SkinnedMeshApp::DrawScene()
 		Effects::NormalMapFX->SetWorldViewProjTex(worldViewProj*toTexSpace);
 		Effects::NormalMapFX->SetShadowTransform(world*shadowTransform);
 		Effects::NormalMapFX->SetTexTransform(XMMatrixScaling(1.0f, 1.0f, 1.0f));
-		
+
 		Effects::NormalMapFX->SetBoneTransforms(
-			&mCharacterInstance2.FinalTransforms[0], 
+			&mCharacterInstance2.FinalTransforms[0],
 			mCharacterInstance2.FinalTransforms.size());
 
-		for(UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
+		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
 		{
 			Effects::NormalMapFX->SetMaterial(mCharacterInstance2.Model->Mat[subset]);
 			Effects::NormalMapFX->SetDiffuseMap(mCharacterInstance2.Model->DiffuseMapSRV[subset]);
@@ -649,7 +688,7 @@ void SkinnedMeshApp::DrawScene()
 			mCharacterInstance2.Model->ModelMesh.Draw(md3dImmediateContext, subset);
 		}
 	}
-	
+
 	// Turn off wireframe.
 	md3dImmediateContext->RSSetState(0);
 
@@ -672,39 +711,6 @@ void SkinnedMeshApp::DrawScene()
 
 	HR(mSwapChain->Present(0, 0));
 }
-
-#pragma region MOUSEEVENT
-
-void SkinnedMeshApp::OnMouseDown(WPARAM btnState, int x, int y)
-{
-	mLastMousePos.x = x;
-	mLastMousePos.y = y;
-
-	SetCapture(mhMainWnd);
-}
-
-void SkinnedMeshApp::OnMouseUp(WPARAM btnState, int x, int y)
-{
-	ReleaseCapture();
-}
-
-void SkinnedMeshApp::OnMouseMove(WPARAM btnState, int x, int y)
-{
-	if( (btnState & MK_LBUTTON) != 0 )
-	{
-		// Make each pixel correspond to a quarter of a degree.
-		float dx = XMConvertToRadians(0.25f*static_cast<float>(x - mLastMousePos.x));
-		float dy = XMConvertToRadians(0.25f*static_cast<float>(y - mLastMousePos.y));
-
-		mCam.Pitch(dy);
-		mCam.RotateY(dx);
-	}
-
-	mLastMousePos.x = x;
-	mLastMousePos.y = y;
-}
-
-#pragma endregion
 
 void SkinnedMeshApp::DrawSceneToSsaoNormalDepthMap()
 {
@@ -1156,11 +1162,13 @@ void SkinnedMeshApp::BuildGBuffer()
 	XMMATRIX worldInvTranspose;
 	XMMATRIX worldViewProj;
 
-	ID3DX11EffectTechnique* gBuffer = Effects::GBufferFX->GBufferTech;
-	ID3DX11EffectTechnique* gBufferSkinned = Effects::GBufferFX->GBufferTechSkinned;
-	ID3DX11EffectTechnique* gBufferBase = Effects::GBufferFX->GBufferTechBase;
+	ID3DX11EffectTechnique* gBuffer				= Effects::GBufferFX->GBufferTech;
+	ID3DX11EffectTechnique* gBufferSkinned		= Effects::GBufferFX->GBufferTechSkinned;
+	ID3DX11EffectTechnique* gBufferBase			= Effects::GBufferFX->GBufferTechBase;
+	ID3DX11EffectTechnique* gBufferBaseReflect	= Effects::GBufferFX->GBufferTechBaseReflect;
 
 	Effects::GBufferFX->SetFarClipDist(mCam.GetFarZ());
+	Effects::GBufferFX->SetEyePosW(mCam.GetPosition());
 	//
 	// Draw the grid, cylinders, spheres, and box.
 	// 
@@ -1243,7 +1251,7 @@ void SkinnedMeshApp::BuildGBuffer()
 			Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
 			Effects::GBufferFX->SetMaterial(mSphereMat);
 
-			gBuffer->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+			gBufferBase->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 			md3dImmediateContext->DrawIndexed(mSphereIndexCount, mSphereIndexOffset, mSphereVertexOffset);
 		}
 	}
@@ -1335,6 +1343,109 @@ void SkinnedMeshApp::BuildGBuffer()
 	}
 
 	md3dImmediateContext->RSSetState(0);
+}
+
+void SkinnedMeshApp::DeferredShadingPass()
+{
+	///////////////////////////g pass////////////////////////////////
+
+	mDeferred->SetMRT(md3dImmediateContext);
+	BuildGBuffer();
+
+	//
+	// Render the scene to the shadow map.
+	//
+
+	mSmap->BindDsvAndSetNullRenderTarget(md3dImmediateContext);
+
+	DrawSceneToShadowMap();
+
+	md3dImmediateContext->RSSetState(0);
+
+	//
+	// Render the view space normals and depths.  This render target has the
+	// same dimensions as the back buffer, so we can use the screen viewport.
+	// This render pass is needed to compute the ambient occlusion.
+	// Notice that we use the main depth/stencil buffer in this pass.  
+
+	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
+	mSsao->BlurAmbientMap(2);
+
+	//
+	// Restore the back and depth buffer and viewport to the OM stage.
+	//
+	ID3D11RenderTargetView* renderTargets[1] = { mRenderTargetView };
+	md3dImmediateContext->OMSetRenderTargets(1, renderTargets, mDepthStencilView);
+	md3dImmediateContext->RSSetViewports(1, &mScreenViewport);
+
+	md3dImmediateContext->ClearRenderTargetView(mRenderTargetView, reinterpret_cast<const float*>(&Colors::Silver));
+
+	// We already laid down scene depth to the depth buffer in the Normal/Depth map pass,
+	// so we can set the depth comparison test to “EQUALS.? This prevents any overdraw
+	// in this rendering pass, as only the nearest visible pixels will pass this depth
+	// comparison test.
+
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
+	//////////////////////////shading pass////////////////////////
+	XMMATRIX viewInv;
+	viewInv.r[0] = mCam.GetRightXM();
+	viewInv.r[1] = mCam.GetUpXM();
+	viewInv.r[2] = mCam.GetLookXM();
+	viewInv.r[3] = { { 0 } };
+
+	Effects::DeferredShadingFX->SetViewInv(viewInv);
+	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());
+	Effects::DeferredShadingFX->SetAmb(XMFLOAT4(0.1f, 0.1f, 0.1f, 0.0f));
+	Effects::DeferredShadingFX->SetShadowTransform(XMLoadFloat4x4(&mShadowTransform));
+	Effects::DeferredShadingFX->SetDirLights(mDirLights);
+
+	Effects::DeferredShadingFX->SetShadowMap(mSmap->DepthMapSRV());
+	Effects::DeferredShadingFX->SetSsaoMap(mSsao->AmbientSRV());
+	Effects::DeferredShadingFX->SetDepthMap(mDeferred->mDepthMapSRV);
+	Effects::DeferredShadingFX->SetGBuffer0(mDeferred->mGBufferSRV0);
+	Effects::DeferredShadingFX->SetGBuffer1(mDeferred->mGBufferSRV1);
+
+	UINT stride = sizeof(XMFLOAT3);
+	UINT offset = 0;
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mDeferred->mVB, &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mDeferred->mIB, DXGI_FORMAT_R16_UINT, 0);
+	md3dImmediateContext->IASetInputLayout(InputLayouts::Pos);
+	md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3DX11_TECHNIQUE_DESC techDesc;
+	Effects::DeferredShadingFX->DeferredShadingTech->GetDesc(&techDesc);
+
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
+		ID3DX11EffectPass* pass = Effects::SkyFX->SkyTech->GetPassByIndex(p);
+
+		pass->Apply(0, md3dImmediateContext);
+
+		md3dImmediateContext->DrawIndexed(mDeferred->mIndexCount, 0, 0);
+	}
+
+
+	// Turn off wireframe.
+	md3dImmediateContext->RSSetState(0);
+
+	// Restore from RenderStates::EqualsDSS
+	md3dImmediateContext->OMSetDepthStencilState(0, 0);
+
+	// Debug view SSAO map.
+	//DrawScreenQuad(mSsao->AmbientSRV());
+
+	mSky->Draw(md3dImmediateContext, mCam);
+
+	// restore default states, as the SkyFX changes them in the effect file.
+	md3dImmediateContext->RSSetState(0);
+	md3dImmediateContext->OMSetDepthStencilState(0, 0);
+
+	// Unbind shadow map and AmbientMap as a shader input because we are going to render
+	// to it next frame.  These textures can be at any slot, so clear all slots.
+	ID3D11ShaderResourceView* nullSRV[16] = { 0 };
+	md3dImmediateContext->PSSetShaderResources(0, 16, nullSRV);
+
+	HR(mSwapChain->Present(0, 0));
 }
 
 #pragma  region BUILDGEOMETRY

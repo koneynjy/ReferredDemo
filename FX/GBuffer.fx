@@ -12,6 +12,7 @@ cbuffer cbPerObject
 
 cbuffer cbPerFrame
 {
+	float3 gEyePosW;
 	float gFarClipDist;
 };
 
@@ -22,6 +23,7 @@ cbuffer cbSkinned
 
 Texture2D gDiffuseMap;
 Texture2D gNormalMap;
+TextureCube gCubeMap;
 
 SamplerState samLinear
 {
@@ -68,6 +70,7 @@ struct VertexOutBase
 {
 	float4 PosH			: SV_POSITION;
 	float3 NormalW		: NORMAL;
+	float3 PosW			: Position;
 	float2 Tex			: TEXCOORD0;
 	float	z			: TEXCOORD1;
 };
@@ -80,10 +83,10 @@ VertexOutBase VSBase(VertexInBase vin)
 
 	//vout.PosW = mul(float4(vin.PosL, 1.0f), gWorld).xyz;
 	vout.NormalW = mul(vin.NormalL, (float3x3)gWorldInvTranspose);
-
+	vout.PosW = mul(vin.PosL, (float3x3)gWorld);
 	// Transform to homogeneous clip space.
 	vout.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
-	vout.z = vout.PosH.w / gFarClipDist;
+	vout.z = vout.PosH.w;
 	// Output vertex attributes for interpolation across triangle.
 	vout.Tex = mul(float4(vin.Tex, 0.0f, 1.0f), gTexTransform).xy;
 
@@ -100,7 +103,7 @@ VertexOut VS(VertexIn vin)
 
 	// Transform to homogeneous clip space.
 	vout.PosH = mul(float4(vin.PosL, 1.0f), gWorldViewProj);
-	vout.z = vout.PosH.w / gFarClipDist;
+	vout.z = vout.PosH.w;
 	// Output vertex attributes for interpolation across triangle.
 	vout.Tex = mul(float4(vin.Tex, 0.0f, 1.0f), gTexTransform).xy;
 
@@ -138,7 +141,7 @@ VertexOut SkinnedVS(SkinnedVertexIn vin)
 
 	// Transform to homogeneous clip space.
 	vout.PosH = mul(float4(posL, 1.0f), gWorldViewProj);
-	vout.z = vout.PosH.w / gFarClipDist;
+	vout.z = vout.PosH.w;
 	// Output vertex attributes for interpolation across triangle.
 	vout.Tex = mul(float4(vin.Tex, 0.0f, 1.0f), gTexTransform).xy;
 
@@ -155,19 +158,28 @@ void PS(VertexOut pin,
 	float3 bumpedNormalW = NormalSampleToWorldSpace(normalMapSample, pin.NormalW, pin.TangentW);
 	c0 = StoreGBufferRT0(bumpedNormalW, gMaterial.Specular.w);
 	c1 = StoreGBufferRT1(gDiffuseMap.Sample(samLinear, pin.Tex).xyz, gMaterial.Specular.xyz);
-	z = pin.z;
+	z = pin.z / gFarClipDist;
 }
 
 ///////////////////base no nmap///////////
 void PSBase(VertexOutBase pin,
+	uniform bool gRefEnable,
 	out float4 c0 : SV_Target0,
 	out float4 c1 : SV_Target1,
 	out float z : SV_Depth)
 {
 	pin.NormalW = normalize(pin.NormalW);
 	c0 = StoreGBufferRT0(pin.NormalW, gMaterial.Specular.w);
-	c1 = StoreGBufferRT1(gDiffuseMap.Sample(samLinear, pin.Tex).xyz, gMaterial.Specular.xyz);
-	z = pin.z;
+	float4 diff = gDiffuseMap.Sample(samLinear, pin.Tex);
+	if (gRefEnable){
+		float3 incident = normalize(pin.PosW - gEyePosW);
+		float3 reflectionVector = reflect(incident, pin.NormalW);
+		float4 reflectionColor = gCubeMap.Sample(samLinear, reflectionVector);
+
+		diff += gMaterial.Reflect*reflectionColor;
+	}
+	c1 = StoreGBufferRT1(diff.xyz, gMaterial.Specular.xyz);
+	z = pin.z / gFarClipDist;
 }
 
 
@@ -197,6 +209,16 @@ technique11 GBufferTechBase
 	{
 		SetVertexShader(CompileShader(vs_5_0, VSBase()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, PSBase()));
+		SetPixelShader(CompileShader(ps_5_0, PSBase(false)));
+	}
+}
+
+technique11 GBufferTechBaseReflect
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VSBase()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PSBase(true)));
 	}
 }

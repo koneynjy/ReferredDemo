@@ -1,4 +1,7 @@
 #include "DeferredShading.h"
+#include "GeometryGenerator.h"
+#include "Vertex.h"
+#include "Effects.h"
 
 DeferredShading::DeferredShading(ID3D11Device* device, UINT width, UINT height)
 :mWidth(width), mHeight(height), mGBufferRTV0(0), mGBufferRTV1(0), 
@@ -90,4 +93,50 @@ void DeferredShading::SetMRT(ID3D11DeviceContext* dc){
 	dc->ClearRenderTargetView(mGBufferRTV0, c);
 	dc->ClearRenderTargetView(mGBufferRTV1, c);
 	dc->ClearDepthStencilView(mDepthMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+}
+
+void DeferredShading::InitQuad(Camera &camera, ID3D11Device* device)
+{
+	GeometryGenerator::MeshData quad;
+	GeometryGenerator geoGen;
+	geoGen.CreateFarPlaneQuad(quad, camera);
+
+	std::vector<XMFLOAT3> vertices(quad.Vertices.size());
+
+	for (size_t i = 0; i < quad.Vertices.size(); ++i)
+	{
+		vertices[i] = quad.Vertices[i].Position;
+	}
+
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(XMFLOAT3) * vertices.size();
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+	vbd.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA vinitData;
+	vinitData.pSysMem = &vertices[0];
+
+	HR(device->CreateBuffer(&vbd, &vinitData, &mVB));
+
+
+	mIndexCount = quad.Indices.size();
+
+	D3D11_BUFFER_DESC ibd;
+	ibd.Usage = D3D11_USAGE_IMMUTABLE;
+	ibd.ByteWidth = sizeof(USHORT) * mIndexCount;
+	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	ibd.CPUAccessFlags = 0;
+	ibd.StructureByteStride = 0;
+	ibd.MiscFlags = 0;
+
+	std::vector<USHORT> indices16;
+	indices16.assign(quad.Indices.begin(), quad.Indices.end());
+
+	D3D11_SUBRESOURCE_DATA iinitData;
+	iinitData.pSysMem = &indices16[0];
+
+	HR(device->CreateBuffer(&ibd, &iinitData, &mIB));
 }
