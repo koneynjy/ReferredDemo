@@ -86,6 +86,7 @@ private:
 	float mFarWindowHeight;
 
 	// Cache View/Proj matrices.
+	XMFLOAT4X4 mViewRot;
 	XMFLOAT4X4 mView;
 	XMFLOAT4X4 mProj;
 };

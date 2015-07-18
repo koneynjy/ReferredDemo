@@ -316,8 +316,10 @@ SsaoEffect::SsaoEffect(ID3D11Device* device, const std::wstring& filename)
 	SsaoTech           = mFX->GetTechniqueByName("Ssao");
 	SsaoDeferred	   = mFX->GetTechniqueByName("SsaoDeferred");
 
+	ViewRot			   = mFX->GetVariableByName("gViewRot")->AsMatrix();
 	ViewToTexSpace     = mFX->GetVariableByName("gViewToTexSpace")->AsMatrix();
 	OffsetVectors      = mFX->GetVariableByName("gOffsetVectors")->AsVector();
+	EyePosW			   = mFX->GetVariableByName("gEyePosW")->AsVector();
 	FrustumCorners     = mFX->GetVariableByName("gFrustumCorners")->AsVector();
 	OcclusionRadius    = mFX->GetVariableByName("gOcclusionRadius")->AsScalar();
 	OcclusionFadeStart = mFX->GetVariableByName("gOcclusionFadeStart")->AsScalar();

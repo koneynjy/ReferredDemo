@@ -1347,6 +1347,7 @@ void SkinnedMeshApp::BuildGBuffer()
 
 void SkinnedMeshApp::DeferredShadingPass()
 {
+	XMMATRIX viewInv;
 	///////////////////////////g pass////////////////////////////////
 
 	mDeferred->SetMRT(md3dImmediateContext);
@@ -1368,7 +1369,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	// This render pass is needed to compute the ambient occlusion.
 	// Notice that we use the main depth/stencil buffer in this pass.  
 
-	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
+	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0, viewInv);
 	mSsao->BlurAmbientMap(2);
 
 	//
@@ -1387,11 +1388,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 
 	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
 	//////////////////////////shading pass////////////////////////
-	XMMATRIX viewInv;
-	viewInv.r[0] = mCam.GetRightXM();
-	viewInv.r[1] = mCam.GetUpXM();
-	viewInv.r[2] = mCam.GetLookXM();
-	viewInv.r[3] = { { 0 } };
+	
 
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
 	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());

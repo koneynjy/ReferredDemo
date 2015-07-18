@@ -62,7 +62,7 @@ VertexOut VS(VertexIn vin)
 float4 PS(VertexOut pin) : SV_Target
 {
 	float3 v = pin.viewDirW * gDepthMap.Sample(samLinear, pin.uv).r;
-	float3 posW = v + gEyePosW//ReBuild World Position
+	float3 posW = v + gEyePosW;//ReBuild World Position
 	float4 gb0 = gGBuffer0.Sample(samLinear, pin.uv);
 	float4 gb1 = gGBuffer1.Sample(samLinear, pin.uv);
 	float3 normalW = GetNormal(gb0);

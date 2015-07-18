@@ -6,7 +6,9 @@
 #include "GBufferUtil.fx"
 cbuffer cbPerFrame
 {
+	float4x4 gViewRot;//
 	float4x4 gViewToTexSpace; // Proj*Texture
+	float4   gEyePosW;//
 	float4   gOffsetVectors[14];
 	float4   gFrustumCorners[4];
 
@@ -72,6 +74,22 @@ VertexOut VS(VertexIn vin)
     return vout;
 }
 
+VertexOut VSDeferred(VertexIn vin)
+{
+	VertexOut vout;
+
+	// Already in NDC space.
+	vout.PosH = float4(vin.PosL, 1.0f);
+
+	// We store the index to the frustum corner in the normal x-coord slot.
+	vout.ToFarPlane = gFrustumCorners[vin.ToFarPlaneIndex.x].xyz;
+
+	// Pass onto pixel shader.
+	vout.Tex = vin.Tex;
+
+	return vout;
+}
+
 // Determines how much the sample point q occludes the point p as a function
 // of distZ.
 float OcclusionFunction(float distZ)
@@ -108,7 +126,7 @@ float OcclusionFunction(float distZ)
 	return occlusion;	
 }
 
-float4 PS(VertexOut pin, uniform int gSampleCount) : SV_Target
+void PS(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target)
 {
 	// p -- the point we are computing the ambient occlusion for.
 	// n -- normal vector at p.
@@ -190,10 +208,10 @@ float4 PS(VertexOut pin, uniform int gSampleCount) : SV_Target
 	float access = 1.0f - occlusionSum;
 
 	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
-	return saturate(pow(access, 4.0f));
+	c = saturate(pow(access, 4.0f));
 }
 
-float4 PSDeferred(VertexOut pin, uniform int gSampleCount) : SV_Target
+void PSDeferred(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target) 
 {
 	// p -- the point we are computing the ambient occlusion for.
 	// n -- normal vector at p.
@@ -203,18 +221,16 @@ float4 PSDeferred(VertexOut pin, uniform int gSampleCount) : SV_Target
 	// Get viewspace normal and z-coord of this pixel.  The tex-coords for
 	// the fullscreen quad we drew are already in uv-space.
 	float4 g0 = gGBuffer0.SampleLevel(samNormalDepth, pin.Tex, 0.0f);
-
-	float3 n = GetNormal(g0).xyz;
-	float pz = gDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f).r;
-
+	float3 n = mul(GetNormal(g0).xyz,(float3x3) gViewRot);
+	float pzNorm = gDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f).r;
 	//
-	// Reconstruct full view space position (x,y,z).
+	// Reconstruct full view space posotion (x,y,z).
 	// Find t such that p = t*pin.ToFarPlane.
 	// p.z = t*pin.ToFarPlane.z
 	// t = p.z / pin.ToFarPlane.z
 	//
-	float3 p = pz * pin.ToFarPlane;
-
+	float3 p = pzNorm * pin.ToFarPlane;
+	float far = gFrustumCorners[0].z;
 	// Extract random vector and map from [0,1] --> [-1, +1].
 	float3 randVec = 2.0f*gRandomVecMap.SampleLevel(samRandomVec, 4.0f*pin.Tex, 0.0f).rgb - 1.0f;
 
@@ -229,27 +245,26 @@ float4 PSDeferred(VertexOut pin, uniform int gSampleCount) : SV_Target
 		// then we get a random uniform distribution of offset vectors.
 		float3 offset = reflect(gOffsetVectors[i].xyz, randVec);
 
-			// Flip offset vector if it is behind the plane defined by (p, n).
-			float flip = sign(dot(offset, n));
+		// Flip offset vector if it is behind the plane defined by (p, n).
+		float flip = sign(dot(offset, n));
 
 		// Sample a point near p within the occlusion radius.
 		float3 q = p + flip * gOcclusionRadius * offset;
 
-			// Project q and generate projective tex-coords.  
-			float4 projQ = mul(float4(q, 1.0f), gViewToTexSpace);
-			projQ /= projQ.w;
+		// Project q and generate projective tex-coords.  
+		float4 projQ = mul(float4(q, 1.0f), gViewToTexSpace);
+		projQ /= projQ.w;
 
 		// Find the nearest depth value along the ray from the eye to q (this is not
 		// the depth of q, as q is just an arbitrary point near p and might
 		// occupy empty space).  To find the nearest depth we look it up in the depthmap.
 
-		float rz = gDepthMap.SampleLevel(samNormalDepth, projQ.xy, 0.0f).r;
-
+		float rzNorm = gDepthMap.SampleLevel(samNormalDepth, projQ.xy, 0.0f).r;
 		// Reconstruct full view space position r = (rx,ry,rz).  We know r
 		// lies on the ray of q, so there exists a t such that r = t*q.
 		// r.z = t*q.z ==> t = r.z / q.z
 
-		float3 r = rz * q;
+		float3 r = (rzNorm * far / q.z) * q;
 
 			//
 			// Test whether r occludes p.
@@ -263,7 +278,7 @@ float4 PSDeferred(VertexOut pin, uniform int gSampleCount) : SV_Target
 			//     from p, then it does not occlude it.
 			// 
 
-			float distZ = p.z - r.z;
+		float distZ = p.z - r.z;
 		float dp = max(dot(n, normalize(r - p)), 0.0f);
 		float occlusion = dp * OcclusionFunction(distZ);
 
@@ -275,7 +290,7 @@ float4 PSDeferred(VertexOut pin, uniform int gSampleCount) : SV_Target
 	float access = 1.0f - occlusionSum;
 
 	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
-	return saturate(pow(access, 4.0f));
+	c =  saturate(pow(access, 4.0f));
 }
 
 technique11 Ssao
@@ -292,7 +307,7 @@ technique11 SsaoDeferred
 {
 	pass P0
 	{
-		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetVertexShader(CompileShader(vs_5_0, VSDeferred()));
 		SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_5_0, PSDeferred(14)));
 	}

@@ -372,7 +372,9 @@ public:
 	SsaoEffect(ID3D11Device* device, const std::wstring& filename);
 	~SsaoEffect();
 
+	void SetViewRot(CXMMATRIX M)						   { ViewRot->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetViewToTexSpace(CXMMATRIX M)                    { ViewToTexSpace->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetEyePosW(const XMFLOAT3& v)                     { EyePosW->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
 	void SetOffsetVectors(const XMFLOAT4 v[14])            { OffsetVectors->SetFloatVectorArray(reinterpret_cast<const float*>(v), 0, 14); }
 	void SetFrustumCorners(const XMFLOAT4 v[4])            { FrustumCorners->SetFloatVectorArray(reinterpret_cast<const float*>(v), 0, 4); }
 	void SetOcclusionRadius(float f)                       { OcclusionRadius->SetFloat(f); }
@@ -388,7 +390,9 @@ public:
 	ID3DX11EffectTechnique* SsaoTech;
 	ID3DX11EffectTechnique* SsaoDeferred;
 
+	ID3DX11EffectMatrixVariable* ViewRot;
 	ID3DX11EffectMatrixVariable* ViewToTexSpace;
+	ID3DX11EffectVectorVariable* EyePosW;
 	ID3DX11EffectVectorVariable* OffsetVectors;
 	ID3DX11EffectVectorVariable* FrustumCorners;
 	ID3DX11EffectScalarVariable* OcclusionRadius;

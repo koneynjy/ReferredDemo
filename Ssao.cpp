@@ -113,8 +113,15 @@ void Ssao::ComputeSsao(const Camera& camera)
 void Ssao::ComputeSsaoDeferred(
 	const Camera& camera,
 	ID3D11ShaderResourceView* depthMap,
-	ID3D11ShaderResourceView* gBuffer0)
+	ID3D11ShaderResourceView* gBuffer0,
+	XMMATRIX& viewInv)
 {
+	viewInv.r[0] = camera.GetRightXM();
+	viewInv.r[1] = camera.GetUpXM();
+	viewInv.r[2] = camera.GetLookXM();
+	viewInv.r[3] = { { 0 } };
+
+	XMMATRIX view = camera.View();
 	// Bind the ambient map as the render target.  Observe that this pass does not bind 
 	// a depth/stencil buffer--it does not need it, and without one, no depth test is
 	// performed, which is what we want.
@@ -130,10 +137,10 @@ void Ssao::ComputeSsaoDeferred(
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.5f, 0.5f, 0.0f, 1.0f);
 
-	XMMATRIX P = camera.Proj();
+	XMMATRIX P = view * camera.Proj();
 	XMMATRIX PT = XMMatrixMultiply(P, T);
-
-	Effects::SsaoFX->SetViewToTexSpace(PT);
+	view.r[3] = { { 0 } };
+	Effects::SsaoFX->SetViewRot(view);
 	Effects::SsaoFX->SetOffsetVectors(mOffsets);
 	Effects::SsaoFX->SetFrustumCorners(mFrustumFarCorner);
 	Effects::SsaoFX->SetDepthMap(depthMap);
@@ -148,7 +155,7 @@ void Ssao::ComputeSsaoDeferred(
 	mDC->IASetVertexBuffers(0, 1, &mScreenQuadVB, &stride, &offset);
 	mDC->IASetIndexBuffer(mScreenQuadIB, DXGI_FORMAT_R16_UINT, 0);
 
-	ID3DX11EffectTechnique* tech = Effects::SsaoFX->SsaoTech;
+	ID3DX11EffectTechnique* tech = Effects::SsaoFX->SsaoDeferred;
 	D3DX11_TECHNIQUE_DESC techDesc;
 
 	tech->GetDesc(&techDesc);
