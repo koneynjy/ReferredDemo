@@ -113,15 +113,10 @@ void Ssao::ComputeSsao(const Camera& camera)
 void Ssao::ComputeSsaoDeferred(
 	const Camera& camera,
 	ID3D11ShaderResourceView* depthMap,
-	ID3D11ShaderResourceView* gBuffer0,
-	XMMATRIX& viewInv)
+	ID3D11ShaderResourceView* gBuffer0)
 {
-	viewInv.r[0] = camera.GetRightXM();
-	viewInv.r[1] = camera.GetUpXM();
-	viewInv.r[2] = camera.GetLookXM();
-	viewInv.r[3] = { { 0 } };
-
 	XMMATRIX view = camera.View();
+	view.r[3] = { { 0 } };
 	// Bind the ambient map as the render target.  Observe that this pass does not bind 
 	// a depth/stencil buffer--it does not need it, and without one, no depth test is
 	// performed, which is what we want.
@@ -137,9 +132,10 @@ void Ssao::ComputeSsaoDeferred(
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.5f, 0.5f, 0.0f, 1.0f);
 
-	XMMATRIX P = view * camera.Proj();
+	XMMATRIX P = camera.Proj();
 	XMMATRIX PT = XMMatrixMultiply(P, T);
-	view.r[3] = { { 0 } };
+	
+	Effects::SsaoFX->SetViewToTexSpace(PT);
 	Effects::SsaoFX->SetViewRot(view);
 	Effects::SsaoFX->SetOffsetVectors(mOffsets);
 	Effects::SsaoFX->SetFrustumCorners(mFrustumFarCorner);

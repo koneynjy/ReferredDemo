@@ -44,8 +44,7 @@ public:
 	void ComputeSsao(const Camera& camera);
 	void ComputeSsaoDeferred(const Camera& camera, 
 		ID3D11ShaderResourceView* depthMap,
-		ID3D11ShaderResourceView* gBuffer0,
-		XMMATRIX &ViewInv);
+		ID3D11ShaderResourceView* gBuffer0);
 
 	///<summary>
 	/// Blurs the ambient map to smooth out the noise caused by only taking a

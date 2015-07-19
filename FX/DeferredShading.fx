@@ -68,7 +68,7 @@ float4 PS(VertexOut pin) : SV_Target
 	float3 normalW = GetNormal(gb0);
 	float gloss = GetShininess(gb0);
 	float4 diff = float4(gb1.xyz, 0.0f);
-	float spec = gb1.w;
+	float spec = gb1.w ;
 	float3 toEye = -v;
 	float4 shadowPosH = mul(float4(posW, 1.0f), gShadowTransform);
 	// Default to multiplicative identity.
@@ -101,7 +101,7 @@ float4 PS(VertexOut pin) : SV_Target
 		specular += shadow[i] * S;
 	}
 
-	litColor = ambient + diffuse + spec;
+	litColor = ambient + diffuse + specular;
 
 	return litColor;
 }

@@ -122,16 +122,16 @@ VertexOut SkinnedVS(SkinnedVertexIn vin)
 	weights[3] = 1.0f - weights[0] - weights[1] - weights[2];
 
 	float3 posL = float3(0.0f, 0.0f, 0.0f);
-		float3 normalL = float3(0.0f, 0.0f, 0.0f);
-		float3 tangentL = float3(0.0f, 0.0f, 0.0f);
+	float3 normalL = float3(0.0f, 0.0f, 0.0f);
+	float3 tangentL = float3(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < 4; ++i)
 	{
 		// Assume no nonuniform scaling when transforming normals, so 
 		// that we do not have to use the inverse-transpose.
 
-		posL += weights[i] * mul(float4(vin.PosL, 1.0f), gBoneTransforms[vin.BoneIndices[i]]).xyz;
-		normalL += weights[i] * mul(vin.NormalL, (float3x3)gBoneTransforms[vin.BoneIndices[i]]);
-		tangentL += weights[i] * mul(vin.TangentL.xyz, (float3x3)gBoneTransforms[vin.BoneIndices[i]]);
+		posL		+= weights[i] * mul(float4(vin.PosL, 1.0f), gBoneTransforms[vin.BoneIndices[i]]).xyz;
+		normalL		+= weights[i] * mul(vin.NormalL, (float3x3)gBoneTransforms[vin.BoneIndices[i]]);
+		tangentL	+= weights[i] * mul(vin.TangentL.xyz, (float3x3)gBoneTransforms[vin.BoneIndices[i]]);
 	}
 
 	// Transform to world space space.
@@ -148,16 +148,17 @@ VertexOut SkinnedVS(SkinnedVertexIn vin)
 	return vout;
 }
 
-void PS(VertexOut pin,
-	out float4 c0 : SV_Target0,
-	out float4 c1 : SV_Target1,
-	out float z : SV_Depth)
+void PS(VertexOut pin
+	,out float4 c0 : SV_Target0
+	,out float4 c1 : SV_Target1
+	,out float z : SV_Depth
+	)
 {
 	pin.NormalW = normalize(pin.NormalW);
 	float3 normalMapSample = gNormalMap.Sample(samLinear, pin.Tex).rgb;
 	float3 bumpedNormalW = NormalSampleToWorldSpace(normalMapSample, pin.NormalW, pin.TangentW);
 	c0 = StoreGBufferRT0(bumpedNormalW, gMaterial.Specular.w);
-	c1 = StoreGBufferRT1(gDiffuseMap.Sample(samLinear, pin.Tex).xyz, gMaterial.Specular.xyz);
+	c1 = StoreGBufferRT1(gDiffuseMap.Sample(samLinear, pin.Tex).xyz * gMaterial.Diffuse.xyz, gMaterial.Specular.xyz);
 	z = pin.z / gFarClipDist;
 }
 
@@ -170,7 +171,7 @@ void PSBase(VertexOutBase pin,
 {
 	pin.NormalW = normalize(pin.NormalW);
 	c0 = StoreGBufferRT0(pin.NormalW, gMaterial.Specular.w);
-	float4 diff = gDiffuseMap.Sample(samLinear, pin.Tex);
+	float4 diff = gMaterial.Diffuse;;
 	if (gRefEnable){
 		float3 incident = normalize(pin.PosW - gEyePosW);
 		float3 reflectionVector = reflect(incident, pin.NormalW);

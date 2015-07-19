@@ -35,7 +35,7 @@ float3 GetNormal(float4 mrt0)
 
 float GetShininess(float4 mrt0)
 {
-	return mrt0.w * 256.0f;
+	return mrt0.w * 50.0f;
 }
 
 float3 GetDiffuse(float4 mrt1)

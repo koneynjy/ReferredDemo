@@ -48,21 +48,21 @@ mGBufferSRV0(0), mGBufferSRV1(0), mDepthMapSRV(0), mDepthMapDSV(0)
 	ReleaseCOM(depthMap);
 
 	//gbuffer
-	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
 	ID3D11Texture2D *rt0 = 0, *rt1 = 0;
 	HR(device->CreateTexture2D(&texDesc, 0, &rt0));
 	HR(device->CreateTexture2D(&texDesc, 0, &rt1));
 
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
-	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	rtvDesc.ViewDimension = D3D11_RTV_DIMENSION_TEXTURE2D;
 	rtvDesc.Texture2D.MipSlice = 0;
 	HR(device->CreateRenderTargetView(rt0, &rtvDesc, &mGBufferRTV0));
-	HR(device->CreateRenderTargetView(rt1, &rtvDesc, &mGBufferRTV0));
+	HR(device->CreateRenderTargetView(rt1, &rtvDesc, &mGBufferRTV1));
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC gsrvDesc;
-	gsrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
+	gsrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	gsrvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
 	gsrvDesc.Texture2D.MipLevels = texDesc.MipLevels;
 	gsrvDesc.Texture2D.MostDetailedMip = 0;
@@ -87,9 +87,9 @@ DeferredShading::~DeferredShading()
 
 void DeferredShading::SetMRT(ID3D11DeviceContext* dc){
 	dc->RSSetViewports(1, &mViewport);
-	ID3D11RenderTargetView* renderTargets[2] = { mGBufferRTV0, mGBufferRTV1 };
-	dc->OMSetRenderTargets(2, renderTargets, mDepthMapDSV);
-	FLOAT c[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	ID3D11RenderTargetView* renderTargets[2] = { mGBufferRTV0, mGBufferRTV1};
+ 	dc->OMSetRenderTargets(2, renderTargets, mDepthMapDSV);
+	FLOAT c[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	dc->ClearRenderTargetView(mGBufferRTV0, c);
 	dc->ClearRenderTargetView(mGBufferRTV1, c);
 	dc->ClearDepthStencilView(mDepthMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
