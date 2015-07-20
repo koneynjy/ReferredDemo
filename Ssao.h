@@ -52,12 +52,15 @@ public:
 	/// we do not blur across discontinuities--we want edges to remain edges.
 	///</summary>
 	void BlurAmbientMap(int blurCount);
-
+	void BlurAmbientMapDeferred(int blurCount,
+		ID3D11ShaderResourceView* depthMap,
+		ID3D11ShaderResourceView* gBuffer0);
 private:
 	Ssao(const Ssao& rhs);
 	Ssao& operator=(const Ssao& rhs);
 
-	void BlurAmbientMap(ID3D11ShaderResourceView* inputSRV, ID3D11RenderTargetView* outputRTV, bool horzBlur);
+	void BlurAmbientMap(ID3D11ShaderResourceView* inputSRV, ID3D11RenderTargetView* outputRTV
+		, ID3DX11EffectTechnique* tech);
 
 	void BuildFrustumFarCorners(float fovy, float farZ);
 

@@ -414,20 +414,28 @@ public:
 	SsaoBlurEffect(ID3D11Device* device, const std::wstring& filename);
 	~SsaoBlurEffect();
 
+	void SetFarClipDist(float f)						   { FarClipDist->SetFloat(f); }
 	void SetTexelWidth(float f)                            { TexelWidth->SetFloat(f); }
 	void SetTexelHeight(float f)                           { TexelHeight->SetFloat(f); }
 
 	void SetNormalDepthMap(ID3D11ShaderResourceView* srv)  { NormalDepthMap->SetResource(srv); }
 	void SetInputImage(ID3D11ShaderResourceView* srv)      { InputImage->SetResource(srv); }
+	void SetGBuffer0(ID3D11ShaderResourceView* srv)        { GBuffer0->SetResource(srv); }
+	void SetDepthMap(ID3D11ShaderResourceView* srv)        { DepthMap->SetResource(srv); }
 
 	ID3DX11EffectTechnique* HorzBlurTech;
 	ID3DX11EffectTechnique* VertBlurTech;
+	ID3DX11EffectTechnique* HorzBlurDeferred;
+	ID3DX11EffectTechnique* VertBlurDeferred;
 
+	ID3DX11EffectScalarVariable* FarClipDist;
 	ID3DX11EffectScalarVariable* TexelWidth;
 	ID3DX11EffectScalarVariable* TexelHeight;
 
 	ID3DX11EffectShaderResourceVariable* NormalDepthMap;
 	ID3DX11EffectShaderResourceVariable* InputImage;
+	ID3DX11EffectShaderResourceVariable* GBuffer0;
+	ID3DX11EffectShaderResourceVariable* DepthMap;
 };
 #pragma endregion
 
@@ -537,6 +545,7 @@ public:
 
 	void SetWorldViewProj(CXMMATRIX M)              { WorldViewProj->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetTexture(ID3D11ShaderResourceView* tex)  { Texture->SetResource(tex); }
+	void SetIntTexture(ID3D11ShaderResourceView* tex)  { Texture->SetResource(tex); }
 
 	ID3DX11EffectTechnique* ViewArgbTech;
 	ID3DX11EffectTechnique* ViewRedTech;
@@ -546,6 +555,7 @@ public:
 
 	ID3DX11EffectMatrixVariable* WorldViewProj;
 	ID3DX11EffectShaderResourceVariable* Texture;
+	ID3DX11EffectShaderResourceVariable* IntTexture;
 };
 #pragma endregion
 

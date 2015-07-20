@@ -287,7 +287,7 @@ void PSDeferred(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Targe
 
 	occlusionSum /= gSampleCount;
 
-	float access = 1.0f - occlusionSum;
+	float access = 1.0f -occlusionSum;
 
 	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
 	c =  saturate(pow(access, 4.0f));

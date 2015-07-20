@@ -201,5 +201,8 @@
     <CustomBuild Include="FX\DeferredShading.fx">
       <Filter>FX</Filter>
     </CustomBuild>
+    <CustomBuild Include="FX\SSR.fx">
+      <Filter>FX</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

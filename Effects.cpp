@@ -343,12 +343,17 @@ SsaoBlurEffect::SsaoBlurEffect(ID3D11Device* device, const std::wstring& filenam
 {
 	HorzBlurTech    = mFX->GetTechniqueByName("HorzBlur");
 	VertBlurTech    = mFX->GetTechniqueByName("VertBlur");
+	HorzBlurDeferred= mFX->GetTechniqueByName("HorzBlurDeferred");
+	VertBlurDeferred= mFX->GetTechniqueByName("VertBlurDeferred");
 
+	FarClipDist		= mFX->GetVariableByName("gFarClipDist")->AsScalar();
 	TexelWidth      = mFX->GetVariableByName("gTexelWidth")->AsScalar();
 	TexelHeight     = mFX->GetVariableByName("gTexelHeight")->AsScalar();
 
 	NormalDepthMap  = mFX->GetVariableByName("gNormalDepthMap")->AsShaderResource();
 	InputImage      = mFX->GetVariableByName("gInputImage")->AsShaderResource();
+	GBuffer0		= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
+	DepthMap		= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
 }
 
 SsaoBlurEffect::~SsaoBlurEffect()
@@ -436,6 +441,7 @@ DebugTexEffect::DebugTexEffect(ID3D11Device* device, const std::wstring& filenam
 
 	WorldViewProj = mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
 	Texture       = mFX->GetVariableByName("gTexture")->AsShaderResource();
+	IntTexture    = mFX->GetVariableByName("gIntTexture")->AsShaderResource();
 }
 
 DebugTexEffect::~DebugTexEffect()

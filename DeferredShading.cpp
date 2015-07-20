@@ -44,6 +44,8 @@ mGBufferSRV0(0), mGBufferSRV1(0), mDepthMapSRV(0), mDepthMapDSV(0)
 	srvDesc.Texture2D.MostDetailedMip = 0;
 	HR(device->CreateShaderResourceView(depthMap, &srvDesc, &mDepthMapSRV));
 
+	srvDesc.Format = DXGI_FORMAT_X24_TYPELESS_G8_UINT;
+	HR(device->CreateShaderResourceView(depthMap, &srvDesc, &mStencilMapSRV));
 	// View saves a reference to the texture so we can release our reference.
 	ReleaseCOM(depthMap);
 

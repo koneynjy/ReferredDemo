@@ -116,7 +116,7 @@ void Ssao::ComputeSsaoDeferred(
 	ID3D11ShaderResourceView* gBuffer0)
 {
 	XMMATRIX view = camera.View();
-	view.r[3] = { { 0 } };
+	//view.r[3] = { { 0 } };
 	// Bind the ambient map as the render target.  Observe that this pass does not bind 
 	// a depth/stencil buffer--it does not need it, and without one, no depth test is
 	// performed, which is what we want.
@@ -164,16 +164,36 @@ void Ssao::ComputeSsaoDeferred(
 
 void Ssao::BlurAmbientMap(int blurCount)
 {
+	Effects::SsaoBlurFX->SetNormalDepthMap(mNormalDepthSRV);
 	for(int i = 0; i < blurCount; ++i)
 	{
 		// Ping-pong the two ambient map textures as we apply
 		// horizontal and vertical blur passes.
-		BlurAmbientMap(mAmbientSRV0, mAmbientRTV1, true);
-		BlurAmbientMap(mAmbientSRV1, mAmbientRTV0, false);
+		BlurAmbientMap(mAmbientSRV0, mAmbientRTV1, Effects::SsaoBlurFX->HorzBlurTech);
+		BlurAmbientMap(mAmbientSRV1, mAmbientRTV0, Effects::SsaoBlurFX->VertBlurTech);
 	}
 }
 
-void Ssao::BlurAmbientMap(ID3D11ShaderResourceView* inputSRV, ID3D11RenderTargetView* outputRTV, bool horzBlur)
+void Ssao::BlurAmbientMapDeferred(int blurCount,
+	ID3D11ShaderResourceView* depthMap,
+	ID3D11ShaderResourceView* gBuffer0
+	)
+{
+	Effects::SsaoBlurFX->SetDepthMap(depthMap);
+	Effects::SsaoBlurFX->SetGBuffer0(gBuffer0);
+	Effects::SsaoBlurFX->SetFarClipDist(mFrustumFarCorner[0].z);
+	for (int i = 0; i < blurCount; ++i)
+	{
+		// Ping-pong the two ambient map textures as we apply
+		// horizontal and vertical blur passes.
+		BlurAmbientMap(mAmbientSRV0, mAmbientRTV1, Effects::SsaoBlurFX->HorzBlurDeferred);
+		BlurAmbientMap(mAmbientSRV1, mAmbientRTV0, Effects::SsaoBlurFX->VertBlurDeferred);
+	}
+}
+
+void Ssao::BlurAmbientMap(ID3D11ShaderResourceView* inputSRV, 
+	ID3D11RenderTargetView* outputRTV, 
+	ID3DX11EffectTechnique* tech)
 {
 	ID3D11RenderTargetView* renderTargets[1] = {outputRTV};
 	mDC->OMSetRenderTargets(1, renderTargets, 0);
@@ -182,19 +202,7 @@ void Ssao::BlurAmbientMap(ID3D11ShaderResourceView* inputSRV, ID3D11RenderTarget
 
 	Effects::SsaoBlurFX->SetTexelWidth(1.0f / mAmbientMapViewport.Width );
 	Effects::SsaoBlurFX->SetTexelHeight(1.0f / mAmbientMapViewport.Height );
-	Effects::SsaoBlurFX->SetNormalDepthMap(mNormalDepthSRV);
 	Effects::SsaoBlurFX->SetInputImage(inputSRV);
-
-	ID3DX11EffectTechnique* tech;
-	if(horzBlur)
-	{
-		tech = Effects::SsaoBlurFX->HorzBlurTech;
-	}
-	else
-	{
-		tech = Effects::SsaoBlurFX->VertBlurTech;
-	}
-
 	UINT stride = sizeof(Vertex::Basic32);
     UINT offset = 0;
 

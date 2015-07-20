@@ -26,7 +26,7 @@
 #include "BasicModel.h"
 #include "SkinnedModel.h"
 #include "DeferredShading.h"
-//#define DEBUGTEX
+#define DEBUGTEX
 struct BoundingSphere
 {
 	BoundingSphere() : Center(0.0f, 0.0f, 0.0f), Radius(0.0f) {}
@@ -453,11 +453,12 @@ void SkinnedMeshApp::ForwardShadingPass()
 	// in this rendering pass, as only the nearest visible pixels will pass this depth
 	// comparison test.
 
-	md3dImmediateContext->OMSetDepthStencilState(RenderStates::EqualsDSS, 0);
 
 #ifdef DEBUGTEX
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
 	DrawScreenQuad(mSsao->AmbientSRV()); 
 #else
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::EqualsDSS, 0);
 	XMMATRIX view = mCam.View();
 	XMMATRIX proj = mCam.Proj();
 	XMMATRIX viewProj = mCam.ViewProj();
@@ -1112,6 +1113,7 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
     {
 		Effects::DebugTexFX->SetWorldViewProj(world);
 		Effects::DebugTexFX->SetTexture(srv);
+		Effects::DebugTexFX->SetIntTexture(srv);
 
 		tech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(6, 0, 0);
@@ -1187,6 +1189,7 @@ void SkinnedMeshApp::BuildGBuffer()
 
 	if (GetAsyncKeyState('1') & 0x8000)
 		md3dImmediateContext->RSSetState(RenderStates::WireframeRS);
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0xff);
 
 	D3DX11_TECHNIQUE_DESC techDesc;
 	gBuffer->GetDesc(&techDesc);
@@ -1196,6 +1199,7 @@ void SkinnedMeshApp::BuildGBuffer()
 		world = XMLoadFloat4x4(&mGridWorld);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
+		
 
 		Effects::GBufferFX->SetWorld(world);
 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
@@ -1212,6 +1216,8 @@ void SkinnedMeshApp::BuildGBuffer()
 		world = XMLoadFloat4x4(&mBoxWorld);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
+
+		//md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);
 
 		Effects::GBufferFX->SetWorld(world);
 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
@@ -1377,7 +1383,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	// Notice that we use the main depth/stencil buffer in this pass.  
 
 	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
-	mSsao->BlurAmbientMap(2);
+	mSsao->BlurAmbientMapDeferred(2, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
 
 	//
 	// Restore the back and depth buffer and viewport to the OM stage.
@@ -1397,7 +1403,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	//////////////////////////shading pass////////////////////////
 	
 #ifdef DEBUGTEX
-	DrawScreenQuad(mSsao->AmbientSRV());
+	DrawScreenQuad(mDeferred->mStencilMapSRV);
 #else
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
 	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());

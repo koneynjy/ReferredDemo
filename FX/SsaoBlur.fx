@@ -8,9 +8,10 @@
 // format, which is small, so we should be able to fit a lot of texels
 // in the cache.
 //=============================================================================
-
+#include "GBufferUtil.fx"
 cbuffer cbPerFrame
 {
+	float gFarClipDist;
 	float gTexelWidth;
 	float gTexelHeight;
 };
@@ -32,6 +33,9 @@ cbuffer cbFixed
 Texture2D gNormalDepthMap;
 Texture2D gInputImage;
  
+Texture2D gDepthMap;
+Texture2D gGBuffer0;
+
 SamplerState samNormalDepth
 {
 	Filter = MIN_MAG_LINEAR_MIP_POINT;
@@ -75,7 +79,7 @@ VertexOut VS(VertexIn vin)
 }
 
 
-float4 PS(VertexOut pin, uniform bool gHorizontalBlur) : SV_Target
+float4 PS(VertexOut pin, uniform bool gHorizontalBlur, uniform bool deferred) : SV_Target
 {
 	float2 texOffset;
 	if(gHorizontalBlur)
@@ -91,8 +95,13 @@ float4 PS(VertexOut pin, uniform bool gHorizontalBlur) : SV_Target
 	float4 color      = gWeights[5]*gInputImage.SampleLevel(samInputImage, pin.Tex, 0.0);
 	float totalWeight = gWeights[5];
 	 
-	float4 centerNormalDepth = gNormalDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f);
-
+	float4 centerNormalDepth;
+	if (deferred){
+		centerNormalDepth.xyz = GetNormal(gGBuffer0.SampleLevel(samNormalDepth, pin.Tex, 0.0f));
+		centerNormalDepth.w = gDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f).r * gFarClipDist;
+	}
+	else
+		centerNormalDepth = gNormalDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f);
 	for(float i = -gBlurRadius; i <=gBlurRadius; ++i)
 	{
 		// We already added in the center weight.
@@ -101,8 +110,13 @@ float4 PS(VertexOut pin, uniform bool gHorizontalBlur) : SV_Target
 
 		float2 tex = pin.Tex + i*texOffset;
 
-		float4 neighborNormalDepth = gNormalDepthMap.SampleLevel(
-			samNormalDepth, tex, 0.0f);
+		float4 neighborNormalDepth;
+		
+		if(deferred) {
+			neighborNormalDepth.xyz = GetNormal(gGBuffer0.SampleLevel(samNormalDepth, tex, 0.0f));
+			neighborNormalDepth.w = gDepthMap.SampleLevel(samNormalDepth, tex, 0.0f).r * gFarClipDist;
+		}
+		else neighborNormalDepth = gNormalDepthMap.SampleLevel(samNormalDepth, tex, 0.0f);
 
 		//
 		// If the center value and neighbor values differ too much (either in 
@@ -133,7 +147,7 @@ technique11 HorzBlur
     {
 		SetVertexShader( CompileShader( vs_5_0, VS() ) );
 		SetGeometryShader( NULL );
-        SetPixelShader( CompileShader( ps_5_0, PS(true) ) );
+        SetPixelShader( CompileShader( ps_5_0, PS(true, false) ) );
     }
 }
 
@@ -143,7 +157,27 @@ technique11 VertBlur
     {
 		SetVertexShader( CompileShader( vs_5_0, VS() ) );
 		SetGeometryShader( NULL );
-        SetPixelShader( CompileShader( ps_5_0, PS(false) ) );
+        SetPixelShader( CompileShader( ps_5_0, PS(false, false) ) );
     }
+}
+
+technique11 HorzBlurDeferred
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PS(true, true)));
+	}
+}
+
+technique11 VertBlurDeferred
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PS(false, true)));
+	}
 }
  

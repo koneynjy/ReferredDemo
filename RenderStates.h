@@ -19,6 +19,7 @@ public:
 	static ID3D11RasterizerState* NoCullRS;
 
 	static ID3D11DepthStencilState* EqualsDSS;
+	static ID3D11DepthStencilState* LessDSS;
 	static ID3D11DepthStencilState* NoDepth;
 	 
 	static ID3D11BlendState* AlphaToCoverageBS;
