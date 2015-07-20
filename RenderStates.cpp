@@ -59,10 +59,14 @@ void RenderStates::InitAll(ID3D11Device* device)
 	lessDesc.StencilEnable = true;
 	lessDesc.StencilReadMask = 0xff;
 	lessDesc.StencilWriteMask = 0xff;
-	lessDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_REPLACE;
-	lessDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_REPLACE;
+	lessDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	lessDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
 	lessDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
 	lessDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	lessDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	lessDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	lessDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	lessDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
 	HR(device->CreateDepthStencilState(&lessDesc, &LessDSS));
 	//NoDepth
 

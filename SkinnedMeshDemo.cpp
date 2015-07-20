@@ -1113,7 +1113,7 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
     {
 		Effects::DebugTexFX->SetWorldViewProj(world);
 		Effects::DebugTexFX->SetTexture(srv);
-		Effects::DebugTexFX->SetIntTexture(srv);
+		Effects::DebugTexFX->SetIntTexture(mDeferred->mStencilMapSRV);
 
 		tech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(6, 0, 0);
@@ -1159,6 +1159,7 @@ void SkinnedMeshApp::BuildShadowTransform()
 
 void SkinnedMeshApp::BuildGBuffer()
 {
+	//md3dImmediateContext->OMSetDepthStencilState(0, 0);
 	XMMATRIX view = mCam.View();
 	XMMATRIX proj = mCam.Proj();
 	XMMATRIX viewProj = mCam.ViewProj();
@@ -1189,8 +1190,8 @@ void SkinnedMeshApp::BuildGBuffer()
 
 	if (GetAsyncKeyState('1') & 0x8000)
 		md3dImmediateContext->RSSetState(RenderStates::WireframeRS);
-	md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0xff);
-
+	md3dImmediateContext->RSSetState(0);
+	
 	D3DX11_TECHNIQUE_DESC techDesc;
 	gBuffer->GetDesc(&techDesc);
 	for (UINT p = 0; p < techDesc.Passes; ++p)
@@ -1200,7 +1201,7 @@ void SkinnedMeshApp::BuildGBuffer()
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
 		
-
+		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0xff);
 		Effects::GBufferFX->SetWorld(world);
 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
 		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
@@ -1217,7 +1218,7 @@ void SkinnedMeshApp::BuildGBuffer()
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
 
-		//md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);
+		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);
 
 		Effects::GBufferFX->SetWorld(world);
 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
@@ -1403,7 +1404,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	//////////////////////////shading pass////////////////////////
 	
 #ifdef DEBUGTEX
-	DrawScreenQuad(mDeferred->mStencilMapSRV);
+	DrawScreenQuad(mDeferred->mGBufferSRV1);
 #else
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
 	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());

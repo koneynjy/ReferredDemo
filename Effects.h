@@ -545,7 +545,7 @@ public:
 
 	void SetWorldViewProj(CXMMATRIX M)              { WorldViewProj->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetTexture(ID3D11ShaderResourceView* tex)  { Texture->SetResource(tex); }
-	void SetIntTexture(ID3D11ShaderResourceView* tex)  { Texture->SetResource(tex); }
+	void SetIntTexture(ID3D11ShaderResourceView* tex)  { IntTexture->SetResource(tex); }
 
 	ID3DX11EffectTechnique* ViewArgbTech;
 	ID3DX11EffectTechnique* ViewRedTech;

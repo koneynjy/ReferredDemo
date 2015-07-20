@@ -94,7 +94,7 @@ void DeferredShading::SetMRT(ID3D11DeviceContext* dc){
 	FLOAT c[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
 	dc->ClearRenderTargetView(mGBufferRTV0, c);
 	dc->ClearRenderTargetView(mGBufferRTV1, c);
-	dc->ClearDepthStencilView(mDepthMapDSV, D3D11_CLEAR_DEPTH, 1.0f, 0);
+	dc->ClearDepthStencilView(mDepthMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 }
 
 void DeferredShading::InitQuad(Camera &camera, ID3D11Device* device)

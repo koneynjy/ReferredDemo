@@ -6,7 +6,7 @@
  
 float4x4  gWorldViewProj;
 Texture2D gTexture;
-Texture2D<uint2> gIntTexture;
+Texture2D<uint4> gIntTexture;
 
 SamplerState samLinear
 {
@@ -42,9 +42,9 @@ VertexOut VS(VertexIn vin)
 float4 PS(VertexOut pin) : SV_Target
 { 
 	uint s = gIntTexture[pin.Tex * int2(800,600)].y;
-	float sf = 0.5f;
-	if (s != 0) sf = 1.0f;
+	float sf = s / 255.0f ;
 	return sf.rrrr;
+	//return gTexture.Sample(samLinear, pin.Tex);
 }
 
 float4 PS(VertexOut pin, uniform int index) : SV_Target
