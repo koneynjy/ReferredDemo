@@ -1,11 +1,13 @@
 // Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
 #ifndef _KDOP
 #define _KDOP
-
+#pragma once;
 #include "Config.h"
 #include "sse.h"
 #include "Matrix.h"
 #include "Box.h"
+
+
 // Indicates how many "k / 2" there are in the k-DOP. 3 == AABB == 6 DOP. The code relies on this being 3.
 #define NUM_PLANES	3
 

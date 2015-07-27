@@ -1,15 +1,15 @@
 #ifndef _SDF_H
 #define _SDF_H
-#include "MeshHelper.h"
+//#
 #include "SDF/MeshUtilities.h"
-
+#include "GeometryGenerator.h"
 struct SDFModel
 {
 	MeshData meshData;
 	FDistanceFieldVolumeData sdfData;
 
 	SDFModel(){};
-	//SDFModel(MeshData<VertexCompact> &md);
+	SDFModel(GeometryGenerator::MeshData &md);
 };
 
 

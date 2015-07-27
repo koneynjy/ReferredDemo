@@ -1,7 +1,7 @@
 // Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
 #ifndef _MATRIX
 #define _MATRIX
-
+#pragma once;
 #include "Config.h"
 #include "Vector.h"
 

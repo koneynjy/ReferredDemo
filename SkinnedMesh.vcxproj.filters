@@ -93,7 +93,7 @@
     <ClCompile Include="SDF\AsyncWork.cpp">
       <Filter>Header Files</Filter>
     </ClCompile>
-    <ClCompile Include="MeshUtilities.cpp">
+    <ClCompile Include="SDF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

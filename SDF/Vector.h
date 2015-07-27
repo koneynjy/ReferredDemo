@@ -1,11 +1,14 @@
 // Copyright 1998-2015 Epic Games, Inc. All Rights Reserved.
 #ifndef _VECTOR
 #define _VECTOR
+#pragma once;
 #include "Config.h"
 #include "MathUtil.h"
 /**
 * A vector in 3-D space composed of components (X, Y, Z) with floating point precision.
 */
+
+
 struct FVector4;
 #pragma region VECTORDEC
 struct FVector
