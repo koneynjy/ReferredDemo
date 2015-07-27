@@ -1363,7 +1363,6 @@ void SkinnedMeshApp::DeferredShadingPass()
 	viewInv.r[0] = mCam.GetRightXM();
 	viewInv.r[1] = mCam.GetUpXM();
 	viewInv.r[2] = mCam.GetLookXM();
-	viewInv.r[3] = { { 0 } };
 	mDeferred->SetMRT(md3dImmediateContext);
 	BuildGBuffer();
 

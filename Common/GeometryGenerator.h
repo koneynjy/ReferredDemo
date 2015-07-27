@@ -17,6 +17,7 @@
 
 #include "d3dUtil.h"
 #include "Camera.h"
+#include "../MeshHelper.h"
 
 class GeometryGenerator
 {

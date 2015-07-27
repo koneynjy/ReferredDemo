@@ -28,7 +28,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -41,7 +41,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -69,7 +69,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <ExecutablePath>$(DXSDK_DIR)Utilities\bin\x86;$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
-    <IncludePath>$(DXSDK_DIR)Include\;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(DXSDK_DIR)Include;..\..\Common;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
     <LibraryPath>$(DXSDK_DIR)Lib\x86;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -79,7 +79,7 @@
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(DXSDK_DIR)\Include;Common;$(IncludePath);</IncludePath>
     <LibraryPath>$(DXSDK_DIR)\Lib\x86;$(LibraryPath);</LibraryPath>
-    <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VC_ExecutablePath_x86);$(WindowsSDK_ExecutablePath);$(VS_ExecutablePath);$(MSBuild_ExecutablePath);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
+    <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\Tools\bin;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\ide;$(ProgramFiles)\HTML Help Workshop;$(MSBuildToolsPath32);$(VSInstallDir);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -171,7 +171,9 @@
     <ClCompile Include="Effects.cpp" />
     <ClCompile Include="LoadM3d.cpp" />
     <ClCompile Include="MeshGeometry.cpp" />
+    <ClCompile Include="MeshUtilities.cpp" />
     <ClCompile Include="RenderStates.cpp" />
+    <ClCompile Include="SDF\AsyncWork.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SkinnedData.cpp" />
     <ClCompile Include="SkinnedModel.cpp" />
@@ -197,7 +199,25 @@
     <ClInclude Include="Effects.h" />
     <ClInclude Include="LoadM3d.h" />
     <ClInclude Include="MeshGeometry.h" />
+    <ClInclude Include="MeshHelper.h" />
     <ClInclude Include="RenderStates.h" />
+    <ClInclude Include="SDF.h" />
+    <ClInclude Include="SDF\AsyncWork.h" />
+    <ClInclude Include="SDF\Box.h" />
+    <ClInclude Include="SDF\BoxSphereBounds.h" />
+    <ClInclude Include="SDF\Config.h" />
+    <ClInclude Include="SDF\Float16.h" />
+    <ClInclude Include="SDF\Float32.h" />
+    <ClInclude Include="SDF\GraphicMath.h" />
+    <ClInclude Include="SDF\IntVector.h" />
+    <ClInclude Include="SDF\kDop.h" />
+    <ClInclude Include="SDF\MathUtil.h" />
+    <ClInclude Include="SDF\Matrix.h" />
+    <ClInclude Include="SDF\MeshUtilities.h" />
+    <ClInclude Include="SDF\RandomStream.h" />
+    <ClInclude Include="SDF\Sphere.h" />
+    <ClInclude Include="SDF\sse.h" />
+    <ClInclude Include="SDF\Vector.h" />
     <ClInclude Include="ShadowMap.h" />
     <ClInclude Include="SkinnedData.h" />
     <ClInclude Include="SkinnedModel.h" />

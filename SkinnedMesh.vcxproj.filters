@@ -90,6 +90,12 @@
     <ClCompile Include="Common\xnacollision.cpp">
       <Filter>Common</Filter>
     </ClCompile>
+    <ClCompile Include="SDF\AsyncWork.cpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshUtilities.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Effects.h">
@@ -160,6 +166,60 @@
     </ClInclude>
     <ClInclude Include="Common\xnacollision.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\AsyncWork.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Box.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\BoxSphereBounds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Float16.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Float32.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\GraphicMath.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\IntVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\kDop.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\MathUtil.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Matrix.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\MeshUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\RandomStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Sphere.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\sse.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Vector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
