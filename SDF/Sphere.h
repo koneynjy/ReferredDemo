@@ -9,7 +9,7 @@
 /**
 * Implements a basic sphere.
 */
-class FSphere
+struct FSphere
 {
 public:
 

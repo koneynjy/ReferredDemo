@@ -19,7 +19,7 @@
 * E=31, M!=0		== NAN
 *
 */
-class FFloat16
+struct FFloat16
 {
 public:
 	union

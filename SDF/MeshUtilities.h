@@ -1,6 +1,5 @@
 #ifndef _MESHUTILITIES
 #define _MESHUTILITIES
-#include "../MeshHelper.h"
 #include "Config.h"
 #include "IntVector.h"
 #include "kDop.h"
@@ -22,8 +21,8 @@ class FDistanceFieldVolumeData
 public:
 
 	/** Signed distance field volume stored in local space. */
-	TArray<FFloat16> DistanceFieldVolume;
-
+	//TArray<FFloat16> DistanceFieldVolume;
+	TArray<SDFFloat> DistanceFieldVolume;
 	/** Dimensions of DistanceFieldVolume. */
 	FIntVector Size;
 
@@ -55,7 +54,7 @@ public:
 		return sizeof(*this) + DistanceFieldVolume.capacity();
 	}
 
-	SIZE_t GetDistanceFieldVolumeData(FFloat16* data)
+	SIZE_t GetDistanceFieldVolumeData(SDFFloat* data)
 	{
 		data = DistanceFieldVolume.data();
 		return DistanceFieldVolume.size();
@@ -107,7 +106,7 @@ private:
 void GenerateStratifiedUniformHemisphereSamples(int32 NumThetaSteps, int32 NumPhiSteps, FRandomStream& RandomStream, TArray<FVector4>& Samples)
 {
 	Samples.clear();
-	Samples.resize(NumThetaSteps * NumPhiSteps, FVector(0));
+	Samples.reserve(NumThetaSteps * NumPhiSteps);
 	for (int32 ThetaIndex = 0; ThetaIndex < NumThetaSteps; ThetaIndex++)
 	{
 		for (int32 PhiIndex = 0; PhiIndex < NumPhiSteps; PhiIndex++)
@@ -137,7 +136,7 @@ public:
 		FIntVector InVolumeDimensions,
 		float InVolumeMaxDistance,
 		int32 InZIndex,
-		TArray<FFloat16>* DistanceFieldVolume)
+		TArray<SDFFloat>* DistanceFieldVolume)
 		:
 		kDopTree(InkDopTree),
 		SampleDirections(InSampleDirections),
@@ -166,11 +165,12 @@ private:
 	int32 ZIndex;
 	bool bNegativeAtBorder;
 	// Output
-	TArray<FFloat16>* OutDistanceFieldVolume;
+	//TArray<FFloat16>* OutDistanceFieldVolume;
+	TArray<SDFFloat>* OutDistanceFieldVolume;
 };
 
 
-FBoxSphereBounds GenerateBoxSphereBounds(const MeshData& LODModel);
+void GenerateBoxSphereBounds(FBoxSphereBounds* bounds, const MeshData& LODModel);
 
 void GenerateSignedDistanceFieldVolumeData(
 	const MeshData& LODModel
@@ -197,7 +197,7 @@ void FMeshDistanceFieldAsyncTask::DoWork()
 			int32 Hit = 0;
 			int32 HitBack = 0;
 
-			for (int32 SampleIndex = 0; SampleIndex < SampleDirections->size(); SampleIndex++)
+			for (uint32 SampleIndex = 0; SampleIndex < SampleDirections->size(); SampleIndex++)
 			{
 				const FVector RayDirection = (*SampleDirections)[SampleIndex];
 
@@ -259,17 +259,16 @@ void FMeshDistanceFieldAsyncTask::DoWork()
 				bNegativeAtBorder = true;
 			}
 
-			(*OutDistanceFieldVolume)[Index] = FFloat16(VolumeSpaceDistance);
+			(*OutDistanceFieldVolume)[Index] = SDFFloat(VolumeSpaceDistance);
 		}
 	}
 }
 
 
-FBoxSphereBounds GenerateBoxSphereBounds(const MeshData& LODModel)
+void GenerateBoxSphereBounds(FBoxSphereBounds* bounds, const MeshData* LODModel)
 {
-	FBoxSphereBounds ret;
 	FVector minv(MAX_FLT), maxv(-MAX_FLT);
-	const TArray<FVector> &vertices = LODModel.Vertices;
+	const TArray<FVector> &vertices = LODModel->Vertices;
 	for (uint32 i = 0; i < vertices.size(); i++){
 		const FVector &V = vertices[i];
 		minv.X = FMath::Min(minv.X, V.X);
@@ -279,10 +278,9 @@ FBoxSphereBounds GenerateBoxSphereBounds(const MeshData& LODModel)
 		maxv.Y = FMath::Max(maxv.Y, V.Y);
 		maxv.Z = FMath::Max(maxv.Z, V.Z);
 	}
-	ret.Origin = (maxv + minv) * 0.5f;
-	ret.BoxExtent = (maxv - minv) * 0.5f;
-	ret.SphereRadius = ret.BoxExtent.Size();
-	return ret;
+	bounds->Origin = (maxv + minv) * 0.5f;
+	bounds->BoxExtent = (maxv - minv) * 0.5f;
+	bounds->SphereRadius = bounds->BoxExtent.Size();;
 }
 
 void GenerateSignedDistanceFieldVolumeData(
@@ -309,11 +307,11 @@ void GenerateSignedDistanceFieldVolumeData(
 			&& Bounds.Origin.Z - Bounds.BoxExtent.Z < KINDA_SMALL_NUMBER
 			&& Bounds.Origin.Z + Bounds.BoxExtent.Z > -KINDA_SMALL_NUMBER;
 
-		for (int32 i = 0; i < Indices.size(); i += 3)
+		for (uint32 i = 0; i < Indices.size(); i += 3)
 		{
-			FVector V0 = PositionVertexBuffer[Indices[i + 0]];
+			FVector V0 = PositionVertexBuffer[Indices[i + 2]];
 			FVector V1 = PositionVertexBuffer[Indices[i + 1]];
-			FVector V2 = PositionVertexBuffer[Indices[i + 2]];
+			FVector V2 = PositionVertexBuffer[Indices[i + 0]];
 
 			if (bMeshWasPlane)
 			{
@@ -369,7 +367,7 @@ void GenerateSignedDistanceFieldVolumeData(
 		TArray<FVector4> OtherHemisphereSamples;
 		GenerateStratifiedUniformHemisphereSamples(NumThetaSteps, NumPhiSteps, RandomStream, OtherHemisphereSamples);
 
-		for (int32 i = 0; i < OtherHemisphereSamples.size(); i++)
+		for (uint32 i = 0; i < OtherHemisphereSamples.size(); i++)
 		{
 			FVector4 Sample = OtherHemisphereSamples[i];
 			Sample.Z *= -1;
@@ -423,7 +421,7 @@ void GenerateSignedDistanceFieldVolumeData(
 			ThreadPool.DoAllWork();
 			bool bNegativeAtBorder = false;
 
-			for (int32 TaskIndex = 0; TaskIndex < AsyncTasks.size(); TaskIndex++)
+			for (uint32 TaskIndex = 0; TaskIndex < AsyncTasks.size(); TaskIndex++)
 			{
 				FAsyncTask<FMeshDistanceFieldAsyncTask>* Task = AsyncTasks[TaskIndex];
 				bNegativeAtBorder = bNegativeAtBorder || Task->GetTask().WasNegativeAtBorder();

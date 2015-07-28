@@ -110,6 +110,25 @@ enum ENoInit { NoInit };
 
 #define PLATFORM_WINDOWS
 
+struct FVector;
+struct FIntVector;
+struct FMatrix;
+struct FVector4;
+struct FBox;
+struct FSphere;
+struct FBoxSphereBounds;
+struct FFloat16;
+struct FFloat32;
+struct MeshData;
+class  FDistanceFieldVolumeData;
+
+
+#ifdef _HALF
+typedef FFloat16 SDFFloat;
+#else
+typedef float SDFFloat;
+#endif // _HALF
+
 #include <iostream>
 #include <vector>
 #define TArray std::vector

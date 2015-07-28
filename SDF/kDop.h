@@ -3,6 +3,7 @@
 #define _KDOP
 #pragma once;
 #include "Config.h"
+#include "AlignedAllocator.h"
 #include "sse.h"
 #include "Matrix.h"
 #include "Box.h"
@@ -44,7 +45,7 @@ struct FVector3SOA
 /**
 * Stores XYZW from 4 vectors in one Struct Of Arrays.
 */
-struct FVector4SOA
+MS_ALIGN(16) struct FVector4SOA
 {
 	/** X = (v0.x, v1.x, v2.x, v3.x) */
 	VectorRegister	X;
@@ -302,6 +303,7 @@ struct FkDOPBuildCollisionTriangle
 	}
 	FVector4 GetLocalNormal() const
 	{
+		//FVector4 LocalNormal = ((V0 - V2) ^ (V1 - V2)).GetSafeNormal();
 		FVector4 LocalNormal = ((V1 - V2) ^ (V0 - V2)).GetSafeNormal();
 		LocalNormal.W = Dot3(V0, LocalNormal);
 		return LocalNormal;
@@ -328,7 +330,7 @@ template <typename COLL_DATA_PROVIDER, typename KDOP_IDX_TYPE> struct TkDOPLineC
 /**
 * Holds the min/max planes that make up a set of 4 bounding volumes.
 */
-struct FFourBox
+MS_ALIGN(16) struct FFourBox
 {
 	/**
 	* Min planes for this set of bounding volumes. Array index is X/Y/Z.
@@ -338,7 +340,7 @@ struct FFourBox
 	/**
 	* Max planes for this set of bounding volumes. Array index is X/Y/Z.
 	*/
-	FVector4 Max[3];
+	MS_ALIGN(16) FVector4 Max[3];
 
 	/**
 	* Sets the box at the passed in index to the passed in box.
@@ -444,8 +446,8 @@ struct TkDOPNode
 	*/
 	FBox SplitTriangleList(int32 Start, int32 NumTris,
 		TArray<FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> >& BuildTriangles,
-		kDOPArray<FTriangleSOA>& SOATriangles,
-		kDOPArray<NodeType>& Nodes)
+		kDOPArray<FTriangleSOA, AAllocator<FTriangleSOA>>& SOATriangles,
+		kDOPArray<NodeType,AAllocator<NodeType>>& Nodes)
 	{
 		// Figure out if we are a leaf node or not
 		if (NumTris > 4)
@@ -908,10 +910,10 @@ struct TkDOPTree
 	typedef TkDOPNode<DataProviderType, KDOP_IDX_TYPE>	NodeType;
 
 	/** The list of nodes contained within this tree. Node 0 is always the root node. */
-	kDOPArray<NodeType> Nodes;
+	kDOPArray<NodeType, AAllocator<NodeType>> Nodes;
 
 	/** The list of collision triangles in this tree. */
-	kDOPArray<FTriangleSOA> SOATriangles;
+	kDOPArray<FTriangleSOA, AAllocator<FTriangleSOA>> SOATriangles;
 
 	/**
 	* Creates the root node and recursively splits the triangles into smaller
@@ -986,11 +988,11 @@ template <typename COLL_DATA_PROVIDER, typename KDOP_IDX_TYPE> struct TkDOPColli
 	/**
 	* The array of the nodes for the kDOP tree
 	*/
-	const kDOPArray<NodeType>& Nodes;
+	const kDOPArray<NodeType, AAllocator<NodeType>>& Nodes;
 	/**
 	* The collision triangle data for the kDOP tree
 	*/
-	const kDOPArray<FTriangleSOA>& SOATriangles;
+	const kDOPArray<FTriangleSOA, AAllocator<FTriangleSOA>>& SOATriangles;
 
 	/**
 	* Hide the default ctor

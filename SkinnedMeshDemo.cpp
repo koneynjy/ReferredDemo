@@ -26,6 +26,7 @@
 #include "BasicModel.h"
 #include "SkinnedModel.h"
 #include "DeferredShading.h"
+#include "SDF.h"
 #define DEBUGTEX
 struct BoundingSphere
 {
@@ -60,8 +61,15 @@ private:
 	void BuildShapeGeometryBuffers();
 	void BuildSkullGeometryBuffers();
 	void BuildScreenQuadGeometryBuffers();
+	void BuildSignedDistanceFieldData();
 
 private:
+
+	SDFModel* gridModel;
+	SDFModel* boxModel;
+	SDFModel* SkullModel;
+	SDFModel* sphereModel;
+	SDFModel* cylinderModel;
 
 	TextureMgr mTexMgr;
 
@@ -1474,6 +1482,13 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	geoGen.CreateGrid(20.0f, 30.0f, 50, 40, grid);
 	geoGen.CreateSphere(0.5f, 20, 20, sphere);
 	geoGen.CreateCylinder(0.5f, 0.5f, 3.0f, 15, 15, cylinder);
+
+	boxModel		= new SDFModel(box);
+	gridModel		= new SDFModel(grid);
+	sphereModel		= new SDFModel(sphere);
+	cylinderModel	= new SDFModel(cylinder);
+
+	sphereModel->GenerateSDF(100.0f, false);
 
 	// Cache the vertex offsets to each object in the concatenated vertex buffer.
 	mBoxVertexOffset      = 0;

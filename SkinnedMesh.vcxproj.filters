@@ -215,10 +215,10 @@
     <ClInclude Include="SDF\Vector.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="MeshHelper.h">
+    <ClInclude Include="SDF.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SDF.h">
+    <ClInclude Include="SDF\AlignedAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -6,7 +6,7 @@
 /**
 * 32 bit float components
 */
-class FFloat32
+struct FFloat32
 {
 public:
 
