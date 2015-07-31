@@ -1488,7 +1488,15 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	sphereModel		= new SDFModel(sphere);
 	cylinderModel	= new SDFModel(cylinder);
 
+	__int64 startTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+
 	sphereModel->GenerateSDF(100.0f, false);
+
+	__int64 endTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
+
+	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
 
 	// Cache the vertex offsets to each object in the concatenated vertex buffer.
 	mBoxVertexOffset      = 0;

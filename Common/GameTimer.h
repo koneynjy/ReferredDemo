@@ -17,9 +17,9 @@ public:
 	void Start(); // Call when unpaused.
 	void Stop();  // Call when paused.
 	void Tick();  // Call every frame.
-
-private:
 	double mSecondsPerCount;
+private:
+	
 	double mDeltaTime;
 
 	__int64 mBaseTime;
