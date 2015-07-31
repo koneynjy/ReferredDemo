@@ -264,5 +264,8 @@
     <CustomBuild Include="FX\SSR.fx">
       <Filter>FX</Filter>
     </CustomBuild>
+    <CustomBuild Include="SDFshadow.fx">
+      <Filter>FX</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
