@@ -5,6 +5,7 @@
 #include "GeometryGenerator.h"
 struct SDFModel
 {
+public:
 	MeshData *meshData;
 	FDistanceFieldVolumeData *sdfData;
 	FBoxSphereBounds *boxSphereBounds;
@@ -15,7 +16,9 @@ struct SDFModel
 		bool bGenerateAsIfTwoSided
 		);
 
-	void GetSDFData(SDFFloat* data, uint32&w, uint32&h, uint32&d);
+	void GetSDFData(SDFFloat*& data, uint32&w, uint32&h, uint32&d);
+	XMFLOAT3 GetBounds();
+	float GetRes();
 	~SDFModel();
 };
 

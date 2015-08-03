@@ -536,6 +536,41 @@ public:
 #pragma endregion
 
 
+#pragma region SDFShadow
+
+class SDFShadowEffect : public Effect
+{
+public :
+	SDFShadowEffect(ID3D11Device* device, const std::wstring& filename);
+	~SDFShadowEffect();
+
+	void SetViewInv(CXMMATRIX M)						{ ViewInv->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetEyePosW(const XMFLOAT3& v)                  { EyePosW->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
+	void SetLightDirs(const XMFLOAT3& v)                { LightDir->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
+
+	void SetSDFToWordInv0(CXMMATRIX M)                  { SDFToWordInv0->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetSDFBounds0(const XMFLOAT3& v)               { SDFBounds0->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
+	void SetSDFRes0(const float f)                      { SDFRes0->SetFloat(f); }
+
+	void SetSDF0(ID3D11ShaderResourceView* tex)         { SDF0->SetResource(tex); }
+	void SetDepthMap(ID3D11ShaderResourceView* tex)     { DepthMap->SetResource(tex); }
+
+	ID3DX11EffectTechnique* SDFShadowTech;
+
+	ID3DX11EffectMatrixVariable* ViewInv;
+	ID3DX11EffectVectorVariable* LightDir;
+	ID3DX11EffectVectorVariable* EyePosW;
+
+	ID3DX11EffectMatrixVariable* SDFToWordInv0;
+	ID3DX11EffectVectorVariable* SDFBounds0;
+	ID3DX11EffectScalarVariable* SDFRes0;
+
+	ID3DX11EffectShaderResourceVariable* DepthMap;
+	ID3DX11EffectShaderResourceVariable* SDF0;
+};
+
+#pragma endregion
+
 #pragma region DebugTexEffect
 class DebugTexEffect : public Effect
 {
@@ -576,6 +611,7 @@ public:
 	static DebugTexEffect* DebugTexFX;
 	static GBufferEffect* GBufferFX;
 	static DeferredShadingEffect* DeferredShadingFX;
+	static SDFShadowEffect* SDFShadowFX;
 };
 #pragma endregion
 

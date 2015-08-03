@@ -173,6 +173,7 @@
     <ClCompile Include="MeshGeometry.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="SDF.cpp" />
+    <ClCompile Include="SDFShadow.cpp" />
     <ClCompile Include="SDF\AsyncWork.cpp" />
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SkinnedData.cpp" />
@@ -201,6 +202,7 @@
     <ClInclude Include="MeshGeometry.h" />
     <ClInclude Include="RenderStates.h" />
     <ClInclude Include="SDF.h" />
+    <ClInclude Include="SDFShadow.h" />
     <ClInclude Include="SDF\AlignedAllocator.h" />
     <ClInclude Include="SDF\AsyncWork.h" />
     <ClInclude Include="SDF\Box.h" />
@@ -377,7 +379,7 @@
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="SDFshadow.fx">
+    <CustomBuild Include="FX\SDFshadow.fx">
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fxc /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(RelativeDir)\%(Filename).fxo</Outputs>

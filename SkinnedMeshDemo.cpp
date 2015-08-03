@@ -27,6 +27,7 @@
 #include "SkinnedModel.h"
 #include "DeferredShading.h"
 #include "SDF.h"
+#include "SDFShadow.h"
 #define DEBUGTEX
 struct BoundingSphere
 {
@@ -62,14 +63,18 @@ private:
 	void BuildSkullGeometryBuffers();
 	void BuildScreenQuadGeometryBuffers();
 	void BuildSignedDistanceFieldData();
+	void SDFShadowPass();
 
 private:
 
+	SDFShadow* mSDFShadow;
 	SDFModel* gridModel;
 	SDFModel* boxModel;
 	SDFModel* SkullModel;
 	SDFModel* sphereModel;
 	SDFModel* cylinderModel;
+
+	ID3D11ShaderResourceView* mSphereSDFSRV;
 
 	TextureMgr mTexMgr;
 
@@ -327,6 +332,7 @@ bool SkinnedMeshApp::Init()
 	mDeferred = new DeferredShading(md3dDevice, mClientWidth, mClientHeight);
 	mDeferred->InitQuad(mCam, md3dDevice);
 
+	mSDFShadow = new SDFShadow(md3dDevice, mClientWidth, mClientHeight);
 	return true;
 }
 
@@ -1259,7 +1265,7 @@ void SkinnedMeshApp::BuildGBuffer()
 		}
 
 		// Draw the spheres.
-		for (int i = 0; i < 10; ++i)
+		for (int i = 3; i < 4; ++i)
 		{
 			world = XMLoadFloat4x4(&mSphereWorld[i]);
 			worldInvTranspose = MathHelper::InverseTranspose(world);
@@ -1374,6 +1380,8 @@ void SkinnedMeshApp::DeferredShadingPass()
 	mDeferred->SetMRT(md3dImmediateContext);
 	BuildGBuffer();
 
+	SDFShadowPass();
+
 	//
 	// Render the scene to the shadow map.
 	//
@@ -1411,7 +1419,8 @@ void SkinnedMeshApp::DeferredShadingPass()
 	//////////////////////////shading pass////////////////////////
 	
 #ifdef DEBUGTEX
-	DrawScreenQuad(mDeferred->mGBufferSRV1);
+	DrawScreenQuad(mSDFShadow->mSDFShadowSRV);
+	//DrawScreenQuad(mDeferred->mGBufferSRV1);
 #else
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
 	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());
@@ -1468,6 +1477,58 @@ void SkinnedMeshApp::DeferredShadingPass()
 	HR(mSwapChain->Present(0, 0));
 }
 
+void SkinnedMeshApp::SDFShadowPass()
+{
+	XMMATRIX viewInv;
+	///////////////////////////g pass////////////////////////////////
+	viewInv.r[0] = mCam.GetRightXM();
+	viewInv.r[1] = mCam.GetUpXM();
+	viewInv.r[2] = mCam.GetLookXM();
+	
+	mSDFShadow->SetRenderTarget(md3dImmediateContext);
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
+	Effects::SDFShadowFX->SetViewInv(viewInv);
+	Effects::SDFShadowFX->SetEyePosW(mCam.GetPosition());
+	Effects::SDFShadowFX->SetLightDirs(XMFLOAT3(-0.707107f, -0.707107f, 0.0f));
+	XMFLOAT3 bounds = sphereModel->GetBounds();
+	XMFLOAT4 extends = XMFLOAT4(bounds.x * 0.5f, bounds.y * 0.5f, bounds.z * 0.5f,2.0f);
+	XMMATRIX SDFToWordInv0 = XMLoadFloat4x4(&mSphereWorld[3]);
+	SDFToWordInv0.r[3] = -SDFToWordInv0.r[3] + XMLoadFloat4(&extends);
+
+	Effects::SDFShadowFX->SetSDFBounds0(bounds);
+	Effects::SDFShadowFX->SetSDFToWordInv0(SDFToWordInv0);
+
+	Effects::SDFShadowFX->SetDepthMap(mDeferred->mDepthMapSRV);
+	Effects::SDFShadowFX->SetSDF0(mSphereSDFSRV);
+	
+	UINT stride = sizeof(XMFLOAT3);
+	UINT offset = 0;
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mDeferred->mVB, &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mDeferred->mIB, DXGI_FORMAT_R16_UINT, 0);
+	md3dImmediateContext->IASetInputLayout(InputLayouts::Pos);
+	md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+	D3DX11_TECHNIQUE_DESC techDesc;
+	Effects::SDFShadowFX->SDFShadowTech->GetDesc(&techDesc);
+
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
+		ID3DX11EffectPass* pass = Effects::SDFShadowFX->SDFShadowTech->GetPassByIndex(p);
+
+		pass->Apply(0, md3dImmediateContext);
+
+		md3dImmediateContext->DrawIndexed(mDeferred->mIndexCount, 0, 0);
+	}
+
+
+	// Turn off wireframe.
+	md3dImmediateContext->RSSetState(0);
+
+	// Restore from RenderStates::EqualsDSS
+	md3dImmediateContext->OMSetDepthStencilState(0, 0);
+
+}
+
 #pragma  region BUILDGEOMETRY
 
 void SkinnedMeshApp::BuildShapeGeometryBuffers()
@@ -1492,7 +1553,37 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
 
 	sphereModel->GenerateSDF(100.0f, false);
+	//cylinderModel->GenerateSDF(20.0f, false);
+	//boxModel->GenerateSDF(20.0f, false);
+	float* sphereData = NULL;
+	unsigned w, h, d;
+	sphereModel->GetSDFData(sphereData, w, h, d);
+	D3D11_TEXTURE3D_DESC texDesc;
+	texDesc.Width = w;
+	texDesc.Height = h;
+	texDesc.Depth = d;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.MiscFlags = 0;
 
+	D3D11_SUBRESOURCE_DATA subdata;
+	subdata.pSysMem = sphereData;
+	subdata.SysMemPitch = w * sizeof(float);
+	subdata.SysMemSlicePitch = w * d * sizeof(float);
+	ID3D11Texture3D* SDFMap = 0;
+	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
+
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+	srvDesc.Texture3D.MipLevels = texDesc.MipLevels;
+	srvDesc.Texture3D.MostDetailedMip = 0;
+	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSphereSDFSRV));
+	ReleaseCOM(SDFMap);
 	__int64 endTime;
 	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
 

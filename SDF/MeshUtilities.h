@@ -54,7 +54,7 @@ public:
 		return sizeof(*this) + DistanceFieldVolume.capacity();
 	}
 
-	SIZE_t GetDistanceFieldVolumeData(SDFFloat* data)
+	SIZE_t GetDistanceFieldVolumeData(SDFFloat*& data)
 	{
 		data = DistanceFieldVolume.data();
 		return DistanceFieldVolume.size();

@@ -96,6 +96,9 @@
     <ClCompile Include="SDF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="SDFShadow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Effects.h">
@@ -221,6 +224,9 @@
     <ClInclude Include="SDF\AlignedAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SDFShadow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="FX\LightHelper.fx">
@@ -264,7 +270,7 @@
     <CustomBuild Include="FX\SSR.fx">
       <Filter>FX</Filter>
     </CustomBuild>
-    <CustomBuild Include="SDFshadow.fx">
+    <CustomBuild Include="FX\SDFshadow.fx">
       <Filter>FX</Filter>
     </CustomBuild>
   </ItemGroup>

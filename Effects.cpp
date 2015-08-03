@@ -429,6 +429,28 @@ DeferredShadingEffect::~DeferredShadingEffect(){}
 
 #pragma endregion
 
+#pragma region SDFShadow
+
+SDFShadowEffect::SDFShadowEffect(ID3D11Device* device, const std::wstring& filename)
+	:Effect(device, filename)
+{
+	SDFShadowTech			= mFX->GetTechniqueByName("SDFShadowTech");
+
+	ViewInv					= mFX->GetVariableByName("gViewInv")->AsMatrix();
+	LightDir				= mFX->GetVariableByName("gLightDir")->AsVector();
+	EyePosW					= mFX->GetVariableByName("gEyePosW")->AsVector();
+
+	SDFToWordInv0			= mFX->GetVariableByName("gSDFToWordInv0")->AsMatrix();
+	SDFBounds0				= mFX->GetVariableByName("gSDFBounds0")->AsVector();
+	SDFRes0					= mFX->GetVariableByName("gSDFRes0")->AsScalar();
+
+	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
+	SDF0					= mFX->GetVariableByName("gSDF0")->AsShaderResource();
+}
+
+SDFShadowEffect::~SDFShadowEffect(){};
+#pragma endregion
+
 #pragma region DebugTexEffect
 DebugTexEffect::DebugTexEffect(ID3D11Device* device, const std::wstring& filename)
 	: Effect(device, filename)
@@ -463,6 +485,7 @@ SkyEffect*             Effects::SkyFX             = 0;
 DebugTexEffect*        Effects::DebugTexFX        = 0;
 GBufferEffect*		   Effects::GBufferFX         = 0;
 DeferredShadingEffect* Effects::DeferredShadingFX = 0;
+SDFShadowEffect*	   Effects::SDFShadowFX		  = 0;
 
 void Effects::InitAll(ID3D11Device* device)
 {
@@ -476,6 +499,7 @@ void Effects::InitAll(ID3D11Device* device)
 	DebugTexFX        = new DebugTexEffect(device, L"FX/DebugTexture.fxo");
 	GBufferFX         = new GBufferEffect(device, L"FX/GBuffer.fxo");
 	DeferredShadingFX = new DeferredShadingEffect(device, L"FX/DeferredShading.fxo");
+	SDFShadowFX		  = new SDFShadowEffect(device, L"FX/SDFshadow.fxo");
 }
 
 void Effects::DestroyAll()
@@ -489,6 +513,7 @@ void Effects::DestroyAll()
 	SafeDelete(SkyFX);
 	SafeDelete(DebugTexFX);
 	SafeDelete(GBufferFX);
+	SafeDelete(SDFShadowFX);
 }
 
 #pragma endregion

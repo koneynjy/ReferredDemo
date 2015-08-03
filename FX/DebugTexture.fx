@@ -41,10 +41,10 @@ VertexOut VS(VertexIn vin)
 
 float4 PS(VertexOut pin) : SV_Target
 { 
-	uint s = gIntTexture[pin.Tex * int2(800,600)].y;
+	/*uint s = gIntTexture[pin.Tex * int2(800,600)].y;
 	float sf = s / 255.0f ;
-	return sf.rrrr;
-	//return gTexture.Sample(samLinear, pin.Tex);
+	return sf.rrrr;*/
+	return float4(gTexture.Sample(samLinear, pin.Tex).rrr, 0.0f);
 }
 
 float4 PS(VertexOut pin, uniform int index) : SV_Target
