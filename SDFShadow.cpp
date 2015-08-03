@@ -51,6 +51,6 @@ void SDFShadow::SetRenderTarget(ID3D11DeviceContext* dc)
 	dc->RSSetViewports(1, &mViewport);
 	ID3D11RenderTargetView* renderTargets[1] = { mSDFShadowRTV };
 	dc->OMSetRenderTargets(1, renderTargets, 0);
-	FLOAT c[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+	FLOAT c[4] = { 1.0f, 1.0f, 1.0f, 0.0f };
 	dc->ClearRenderTargetView(mSDFShadowRTV, c);
 }

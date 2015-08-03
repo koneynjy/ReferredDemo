@@ -8,8 +8,6 @@ public:
 	SDFShadow(ID3D11Device* device, UINT width, UINT height);
 	~SDFShadow();
 
-	ID3D11ShaderResourceView* DepthMapSRV();
-
 	void SetRenderTarget(ID3D11DeviceContext* dc);
 
 	UINT mWidth;

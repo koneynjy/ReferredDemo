@@ -1,6 +1,8 @@
 
+#include"GBufferUtil.fx"
 texture3D gSDF0;
 texture2D gDepthMap;
+texture2D gGBuffer0;
 
 cbuffer cbPerFrame
 {
@@ -115,21 +117,30 @@ float4 PS(VertexOut pin) : SV_Target
 	//return v.zzzz / 50;
 	float3 posW = v + gEyePosW;//ReBuild World Position
 	float3 posSDF = mul(float4(posW, 1.0), gSDFToWordInv0).xyz;
+	float4 gb0 = gGBuffer0.Sample(samLinear, pin.uv);
+	float3 normalW = GetNormal(gb0);
+	float3 dir = -gLightDir;
+	clip(dot(normalW, dir));
 	float3 i1 = float3(0,0,0), i2;
 	int steps;
 	float length, len = 0;
-	float4 shadow = float4(0, 0, 0, 0);
-	float3 dir = -gLightDir;
+	float4 shadow = float4(1.0f, 0, 0, 0);
+	
+	
 	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length))
 	{
 		//return float4(1.0f,0,0,0);
 		float3 start = i1;
-		for (int i = 0; i <= 10000; ++i)
+		float step = gSDF0.Sample(samLinear, start / gSDFBounds0).r;
+		if (step <= 0) return shadow;
+		start += step * dir;
+		[unroll(50)]
+		for (int i = 0; i <= steps; ++i)
 		{
 			float3 uvw = start / gSDFBounds0;
-			float step = gSDF0.Sample(samLinear, start).r;
+			step = gSDF0.Sample(samLinear, uvw).r;
 			if (step <= 0){
-				shadow.r = 1.0f;
+				shadow.r = 0.0f;
 				break;
 			}
 			if (len >= length) break;

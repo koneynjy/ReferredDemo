@@ -517,6 +517,7 @@ public:
 	void SetDepthMap(ID3D11ShaderResourceView* tex)		{ DepthMap->SetResource(tex); }
 	void SetGBuffer0(ID3D11ShaderResourceView* tex)		{ GBuffer0->SetResource(tex); }
 	void SetGBuffer1(ID3D11ShaderResourceView* tex)		{ GBuffer1->SetResource(tex); }
+	void SetSDFShadow(ID3D11ShaderResourceView* tex)	{ SDFShadow->SetResource(tex); }
 
 	ID3DX11EffectTechnique* DeferredShadingTech;
 
@@ -531,6 +532,7 @@ public:
 	ID3DX11EffectShaderResourceVariable* DepthMap;
 	ID3DX11EffectShaderResourceVariable* GBuffer0;
 	ID3DX11EffectShaderResourceVariable* GBuffer1;
+	ID3DX11EffectShaderResourceVariable* SDFShadow;
 };
 
 #pragma endregion
@@ -552,6 +554,7 @@ public :
 	void SetSDFBounds0(const XMFLOAT3& v)               { SDFBounds0->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
 	void SetSDFRes0(const float f)                      { SDFRes0->SetFloat(f); }
 
+	void SetGBuffer0(ID3D11ShaderResourceView* tex)     { GBuffer0->SetResource(tex); }
 	void SetSDF0(ID3D11ShaderResourceView* tex)         { SDF0->SetResource(tex); }
 	void SetDepthMap(ID3D11ShaderResourceView* tex)     { DepthMap->SetResource(tex); }
 
@@ -566,6 +569,7 @@ public :
 	ID3DX11EffectScalarVariable* SDFRes0;
 
 	ID3DX11EffectShaderResourceVariable* DepthMap;
+	ID3DX11EffectShaderResourceVariable* GBuffer0;
 	ID3DX11EffectShaderResourceVariable* SDF0;
 };
 

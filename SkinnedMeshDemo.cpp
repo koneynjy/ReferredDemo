@@ -28,7 +28,7 @@
 #include "DeferredShading.h"
 #include "SDF.h"
 #include "SDFShadow.h"
-#define DEBUGTEX
+//#define DEBUGTEX
 struct BoundingSphere
 {
 	BoundingSphere() : Center(0.0f, 0.0f, 0.0f), Radius(0.0f) {}
@@ -211,7 +211,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	}
 
 	mDirLights[0].Ambient  = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	mDirLights[0].Diffuse  = XMFLOAT4(1.0f, 0.9f, 0.9f, 1.0f);
+	mDirLights[0].Diffuse  = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
 	mDirLights[0].Specular = XMFLOAT4(0.8f, 0.8f, 0.7f, 1.0f);
 	mDirLights[0].Direction = XMFLOAT3(-0.57735f, -0.57735f, 0.57735f);
 
@@ -223,9 +223,9 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 // 	mDirLights[0].Direction = XMFLOAT3(10.0f/sqrtf(109.0f), -3.0f/sqrtf(109.0f), 0.0f);
 
 	mDirLights[1].Ambient  = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
-	mDirLights[1].Diffuse  = XMFLOAT4(0.40f, 0.40f, 0.40f, 1.0f);
+	mDirLights[1].Diffuse  = XMFLOAT4(0.80f, 0.80f, 0.80f, 1.0f);
 	mDirLights[1].Specular = XMFLOAT4(0.2f, 0.2f, 0.2f, 1.0f);
-	mDirLights[1].Direction = XMFLOAT3(0.707f, -0.707f, 0.0f);
+	mDirLights[1].Direction = XMFLOAT3(-0.707f, -0.707f, 0.0f);
 
 	mDirLights[2].Ambient  = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 	mDirLights[2].Diffuse  = XMFLOAT4(0.4f, 0.4f, 0.4f, 1.0f);
@@ -1428,6 +1428,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	Effects::DeferredShadingFX->SetShadowTransform(XMLoadFloat4x4(&mShadowTransform));
 	Effects::DeferredShadingFX->SetDirLights(mDirLights);
 
+	Effects::DeferredShadingFX->SetSDFShadow(mSDFShadow->mSDFShadowSRV);
 	Effects::DeferredShadingFX->SetShadowMap(mSmap->DepthMapSRV());
 	Effects::DeferredShadingFX->SetSsaoMap(mSsao->AmbientSRV());
 	Effects::DeferredShadingFX->SetDepthMap(mDeferred->mDepthMapSRV);
@@ -1489,7 +1490,7 @@ void SkinnedMeshApp::SDFShadowPass()
 	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
 	Effects::SDFShadowFX->SetViewInv(viewInv);
 	Effects::SDFShadowFX->SetEyePosW(mCam.GetPosition());
-	Effects::SDFShadowFX->SetLightDirs(XMFLOAT3(-0.707107f, -0.707107f, 0.0f));
+	Effects::SDFShadowFX->SetLightDirs(mDirLights[1].Direction);
 	XMFLOAT3 bounds = sphereModel->GetBounds();
 	XMFLOAT4 extends = XMFLOAT4(bounds.x * 0.5f, bounds.y * 0.5f, bounds.z * 0.5f,2.0f);
 	XMMATRIX SDFToWordInv0 = XMLoadFloat4x4(&mSphereWorld[3]);
@@ -1498,6 +1499,7 @@ void SkinnedMeshApp::SDFShadowPass()
 	Effects::SDFShadowFX->SetSDFBounds0(bounds);
 	Effects::SDFShadowFX->SetSDFToWordInv0(SDFToWordInv0);
 
+	Effects::SDFShadowFX->SetGBuffer0(mDeferred->mGBufferSRV0);
 	Effects::SDFShadowFX->SetDepthMap(mDeferred->mDepthMapSRV);
 	Effects::SDFShadowFX->SetSDF0(mSphereSDFSRV);
 	

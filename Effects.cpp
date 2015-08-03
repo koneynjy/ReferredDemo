@@ -423,6 +423,7 @@ DeferredShadingEffect::DeferredShadingEffect(ID3D11Device* device, const std::ws
 	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
 	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 	GBuffer1				= mFX->GetVariableByName("gGBuffer1")->AsShaderResource();
+	SDFShadow				= mFX->GetVariableByName("gSDFShadow")->AsShaderResource();
 }
 
 DeferredShadingEffect::~DeferredShadingEffect(){}
@@ -444,6 +445,7 @@ SDFShadowEffect::SDFShadowEffect(ID3D11Device* device, const std::wstring& filen
 	SDFBounds0				= mFX->GetVariableByName("gSDFBounds0")->AsVector();
 	SDFRes0					= mFX->GetVariableByName("gSDFRes0")->AsScalar();
 
+	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
 	SDF0					= mFX->GetVariableByName("gSDF0")->AsShaderResource();
 }
