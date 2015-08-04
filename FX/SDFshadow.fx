@@ -40,8 +40,8 @@ struct VertexOut
 
 bool inBounds(float3 start, float3 bounds)
 {
-	return start.x >= -0.0001 & start.y >= -0.0001 & start.z >= -0.0001 &
-		start.x <= bounds.x + 0.0001  &  start.y <= bounds.y + 0.0001 & start.z <= bounds.z + 0.0001;
+	return start.x >= -0.00001 & start.y >= -0.00001 & start.z >= -0.00001 &
+		start.x <= bounds.x + 0.00001  &  start.y <= bounds.y + 0.00001 & start.z <= bounds.z + 0.00001;
 }
 
 bool IntersectBounds(float3 start, float3 dir, float3 bounds,
@@ -126,20 +126,22 @@ float4 PS(VertexOut pin) : SV_Target
 	float length, len = 0;
 	float4 shadow = float4(1.0f, 0, 0, 0);
 	
-	
 	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length))
 	{
 		//return float4(1.0f,0,0,0);
 		float3 start = i1;
-		float step = gSDF0.Sample(samLinear, start / gSDFBounds0).r;
+		float3 scale = float3(1.0f, 1.0f, 1.0f) / gSDFBounds0;
+		start *= scale;
+		dir *= scale;
+		float step = gSDF0.Sample(samLinear, start).r;
 		if (step <= 0) return shadow;
 		start += step * dir;
-		[unroll(50)]
+		[unroll(5)]
 		for (int i = 0; i <= steps; ++i)
 		{
-			float3 uvw = start / gSDFBounds0;
-			step = gSDF0.Sample(samLinear, uvw).r;
-			if (step <= 0){
+			//float3 uvw = start * scale;
+			step = gSDF0.Sample(samLinear, start).r;
+			if (step <= 0.01f){
 				shadow.r = 0.0f;
 				break;
 			}

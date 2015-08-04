@@ -9,7 +9,7 @@ public:
 	~SDFShadow();
 
 	void SetRenderTarget(ID3D11DeviceContext* dc);
-
+	void ClearShadow(ID3D11DeviceContext* dc);
 	UINT mWidth;
 	UINT mHeight;
 

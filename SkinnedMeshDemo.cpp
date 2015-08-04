@@ -1381,7 +1381,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	BuildGBuffer();
 
 	SDFShadowPass();
-
+	//mSDFShadow->ClearShadow(md3dImmediateContext);
 	//
 	// Render the scene to the shadow map.
 	//
@@ -1554,14 +1554,14 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	__int64 startTime;
 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
 
-	sphereModel->GenerateSDF(100.0f, false);
+	sphereModel->GenerateSDF(400.0f, false);
 	//cylinderModel->GenerateSDF(20.0f, false);
 	//boxModel->GenerateSDF(20.0f, false);
 	float* sphereData = NULL;
 	unsigned w, h, d;
 	sphereModel->GetSDFData(sphereData, w, h, d);
 	D3D11_TEXTURE3D_DESC texDesc;
-	texDesc.Width = w;
+	texDesc.Width = w;					 
 	texDesc.Height = h;
 	texDesc.Depth = d;
 	texDesc.MipLevels = 1;
