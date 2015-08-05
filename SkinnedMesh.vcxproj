@@ -178,7 +178,9 @@
     <ClCompile Include="ShadowMap.cpp" />
     <ClCompile Include="SkinnedData.cpp" />
     <ClCompile Include="SkinnedModel.cpp" />
-    <ClCompile Include="SkinnedMeshDemo.cpp" />
+    <ClCompile Include="SkinnedMeshDemo.cpp">
+      <Optimization Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">MaxSpeed</Optimization>
+    </ClCompile>
     <ClCompile Include="Sky.cpp" />
     <ClCompile Include="Ssao.cpp" />
     <ClCompile Include="Vertex.cpp" />

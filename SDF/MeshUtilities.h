@@ -391,11 +391,16 @@ void GenerateSignedDistanceFieldVolumeData(
 
 			const FVector DesiredDimensions(DistanceFieldVolumeBounds.GetSize() * FVector(NumVoxelsPerLocalSpaceUnit));
 
-			const FIntVector VolumeDimensions(
+// 			const FIntVector VolumeDimensions(
+// 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.X), MinNumVoxelsOneDim, MaxNumVoxelsOneDim),
+// 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.Y), MinNumVoxelsOneDim, MaxNumVoxelsOneDim),
+// 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.Z), MinNumVoxelsOneDim, MaxNumVoxelsOneDim));
+
+			int32 i32 = FMath::Max3(
 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.X), MinNumVoxelsOneDim, MaxNumVoxelsOneDim),
 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.Y), MinNumVoxelsOneDim, MaxNumVoxelsOneDim),
 				FMath::Clamp(FMath::TruncToInt(DesiredDimensions.Z), MinNumVoxelsOneDim, MaxNumVoxelsOneDim));
-
+			const FIntVector VolumeDimensions(i32);
 			OutData.Size = VolumeDimensions;
 			OutData.LocalBoundingBox = DistanceFieldVolumeBounds;
 			OutData.DistanceFieldVolume.clear();

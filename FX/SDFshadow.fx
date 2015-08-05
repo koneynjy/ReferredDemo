@@ -125,26 +125,28 @@ float4 PS(VertexOut pin) : SV_Target
 	int steps;
 	float length, len = 0;
 	float4 shadow = float4(1.0f, 0, 0, 0);
-	
 	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length))
 	{
-		//return float4(1.0f,0,0,0);
+		//return float4(0.0f,0,0,0);
 		float3 start = i1;
 		float3 scale = float3(1.0f, 1.0f, 1.0f) / gSDFBounds0;
 		start *= scale;
 		dir *= scale;
 		float step = gSDF0.Sample(samLinear, start).r;
-		if (step <= 0) return shadow;
+		if (step <= 0.0001f) return shadow;
 		start += step * dir;
-		[unroll(5)]
+		len += step;
+		[unroll(200)]
 		for (int i = 0; i <= steps; ++i)
 		{
 			//float3 uvw = start * scale;
 			step = gSDF0.Sample(samLinear, start).r;
-			if (step <= 0.01f){
+			if (step <= .001f){
 				shadow.r = 0.0f;
 				break;
 			}
+			if (step < 0.2f) step = 0.5f;
+			len += step;
 			if (len >= length) break;
 			start += step * dir;
 		}

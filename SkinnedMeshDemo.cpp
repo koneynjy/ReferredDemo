@@ -63,18 +63,22 @@ private:
 	void BuildSkullGeometryBuffers();
 	void BuildScreenQuadGeometryBuffers();
 	void BuildSignedDistanceFieldData();
-	void SDFShadowPass();
+	void SDFShadowPass(SDFModel* sdfMoel,
+	ID3D11ShaderResourceView* sdfSRV,
+	XMFLOAT4X4 &worldMat);
 
 private:
 
 	SDFShadow* mSDFShadow;
 	SDFModel* gridModel;
 	SDFModel* boxModel;
-	SDFModel* SkullModel;
+	SDFModel* skullModel;
 	SDFModel* sphereModel;
 	SDFModel* cylinderModel;
 
 	ID3D11ShaderResourceView* mSphereSDFSRV;
+	ID3D11ShaderResourceView* mSkullSDFSRV;
+	ID3D11ShaderResourceView* mCylinderSDFSRV;
 
 	TextureMgr mTexMgr;
 
@@ -211,7 +215,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	}
 
 	mDirLights[0].Ambient  = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
-	mDirLights[0].Diffuse  = XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f);
+	mDirLights[0].Diffuse  = XMFLOAT4(0.8f, 0.8f, 0.8f, 1.0f);
 	mDirLights[0].Specular = XMFLOAT4(0.8f, 0.8f, 0.7f, 1.0f);
 	mDirLights[0].Direction = XMFLOAT3(-0.57735f, -0.57735f, 0.57735f);
 
@@ -976,17 +980,17 @@ void SkinnedMeshApp::DrawSceneToShadowMap()
 		md3dImmediateContext->DrawIndexed(mGridIndexCount, mGridIndexOffset, mGridVertexOffset);
 
 		// Draw the box.
-		world = XMLoadFloat4x4(&mBoxWorld);
-		worldInvTranspose = MathHelper::InverseTranspose(world);
-		worldViewProj = world*view*proj;
-
-		Effects::BuildShadowMapFX->SetWorld(world);
-		Effects::BuildShadowMapFX->SetWorldInvTranspose(worldInvTranspose);
-		Effects::BuildShadowMapFX->SetWorldViewProj(worldViewProj);
-		Effects::BuildShadowMapFX->SetTexTransform(XMMatrixScaling(2.0f, 1.0f, 1.0f));
-
-		smapTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
-		md3dImmediateContext->DrawIndexed(mBoxIndexCount, mBoxIndexOffset, mBoxVertexOffset);
+// 		world = XMLoadFloat4x4(&mBoxWorld);
+// 		worldInvTranspose = MathHelper::InverseTranspose(world);
+// 		worldViewProj = world*view*proj;
+// 
+// 		Effects::BuildShadowMapFX->SetWorld(world);
+// 		Effects::BuildShadowMapFX->SetWorldInvTranspose(worldInvTranspose);
+// 		Effects::BuildShadowMapFX->SetWorldViewProj(worldViewProj);
+// 		Effects::BuildShadowMapFX->SetTexTransform(XMMatrixScaling(2.0f, 1.0f, 1.0f));
+// 
+// 		smapTech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+// 		md3dImmediateContext->DrawIndexed(mBoxIndexCount, mBoxIndexOffset, mBoxVertexOffset);
 
 		// Draw the cylinders.
 		for(int i = 0; i < 10; ++i)
@@ -1137,7 +1141,7 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 void SkinnedMeshApp::BuildShadowTransform()
 {
 	// Only the first "main" light casts a shadow.
-	XMVECTOR lightDir = XMLoadFloat3(&mDirLights[0].Direction);
+	XMVECTOR lightDir = XMLoadFloat3(&mDirLights[1].Direction);
 	XMVECTOR lightPos = -2.0f*mSceneBounds.Radius*lightDir;
 	XMVECTOR targetPos = XMLoadFloat3(&mSceneBounds.Center);
 	XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
@@ -1228,22 +1232,22 @@ void SkinnedMeshApp::BuildGBuffer()
 		md3dImmediateContext->DrawIndexed(mGridIndexCount, mGridIndexOffset, mGridVertexOffset);
 
 		// Draw the box.
-		world = XMLoadFloat4x4(&mBoxWorld);
-		worldInvTranspose = MathHelper::InverseTranspose(world);
-		worldViewProj = world*viewProj;
-
-		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);
-
-		Effects::GBufferFX->SetWorld(world);
-		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
-		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
-		Effects::GBufferFX->SetTexTransform(XMMatrixScaling(2.0f, 1.0f, 1.0f));
-		Effects::GBufferFX->SetMaterial(mBoxMat);
-		Effects::GBufferFX->SetDiffuseMap(mBrickTexSRV);
-		Effects::GBufferFX->SetNormalMap(mBrickNormalTexSRV);
-
-		gBuffer->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
-		md3dImmediateContext->DrawIndexed(mBoxIndexCount, mBoxIndexOffset, mBoxVertexOffset);
+// 		world = XMLoadFloat4x4(&mBoxWorld);
+// 		worldInvTranspose = MathHelper::InverseTranspose(world);
+// 		worldViewProj = world*viewProj;
+// 
+// 		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);
+// 
+// 		Effects::GBufferFX->SetWorld(world);
+// 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
+// 		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
+// 		Effects::GBufferFX->SetTexTransform(XMMatrixScaling(2.0f, 1.0f, 1.0f));
+// 		Effects::GBufferFX->SetMaterial(mBoxMat);
+// 		Effects::GBufferFX->SetDiffuseMap(mBrickTexSRV);
+// 		Effects::GBufferFX->SetNormalMap(mBrickNormalTexSRV);
+// 
+// 		gBuffer->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+// 		md3dImmediateContext->DrawIndexed(mBoxIndexCount, mBoxIndexOffset, mBoxVertexOffset);
 
 		// Draw the cylinders.
 		for (int i = 0; i < 10; ++i)
@@ -1313,59 +1317,59 @@ void SkinnedMeshApp::BuildGBuffer()
 	// Draw the animated characters.
 	//
 
-	md3dImmediateContext->IASetInputLayout(InputLayouts::PosNormalTexTanSkinned);
-
-	gBufferSkinned->GetDesc(&techDesc);
-	for (UINT p = 0; p < techDesc.Passes; ++p)
-	{
-		// Instance 1
-
-		world = XMLoadFloat4x4(&mCharacterInstance1.World);
-		worldInvTranspose = MathHelper::InverseTranspose(world);
-		worldViewProj = world*view * proj;
-
-		Effects::GBufferFX->SetWorld(world);
-		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
-		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
-		Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
-		Effects::GBufferFX->SetBoneTransforms(
-			&mCharacterInstance1.FinalTransforms[0],
-			mCharacterInstance1.FinalTransforms.size());
-
-		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
-		{
-			Effects::GBufferFX->SetMaterial(mCharacterInstance1.Model->Mat[subset]);
-			Effects::GBufferFX->SetDiffuseMap(mCharacterInstance1.Model->DiffuseMapSRV[subset]);
-			Effects::GBufferFX->SetNormalMap(mCharacterInstance1.Model->NormalMapSRV[subset]);
-
-			gBufferSkinned->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
-			mCharacterInstance1.Model->ModelMesh.Draw(md3dImmediateContext, subset);
-		}
-
-		// Instance 2
-
-		world = XMLoadFloat4x4(&mCharacterInstance2.World);
-		worldInvTranspose = MathHelper::InverseTranspose(world);
-		worldViewProj = world*view * proj;
-
-		Effects::GBufferFX->SetWorld(world);
-		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
-		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
-		Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
-		Effects::GBufferFX->SetBoneTransforms(
-			&mCharacterInstance2.FinalTransforms[0],
-			mCharacterInstance2.FinalTransforms.size());
-
-		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
-		{
-			Effects::GBufferFX->SetMaterial(mCharacterInstance1.Model->Mat[subset]);
-			Effects::GBufferFX->SetDiffuseMap(mCharacterInstance1.Model->DiffuseMapSRV[subset]);
-			Effects::GBufferFX->SetNormalMap(mCharacterInstance1.Model->NormalMapSRV[subset]);
-			
-			gBufferSkinned->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
-			mCharacterInstance2.Model->ModelMesh.Draw(md3dImmediateContext, subset);
-		}
-	}
+// 	md3dImmediateContext->IASetInputLayout(InputLayouts::PosNormalTexTanSkinned);
+// 
+// 	gBufferSkinned->GetDesc(&techDesc);
+// 	for (UINT p = 0; p < techDesc.Passes; ++p)
+// 	{
+// 		// Instance 1
+// 
+// 		world = XMLoadFloat4x4(&mCharacterInstance1.World);
+// 		worldInvTranspose = MathHelper::InverseTranspose(world);
+// 		worldViewProj = world*view * proj;
+// 
+// 		Effects::GBufferFX->SetWorld(world);
+// 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
+// 		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
+// 		Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
+// 		Effects::GBufferFX->SetBoneTransforms(
+// 			&mCharacterInstance1.FinalTransforms[0],
+// 			mCharacterInstance1.FinalTransforms.size());
+// 
+// 		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
+// 		{
+// 			Effects::GBufferFX->SetMaterial(mCharacterInstance1.Model->Mat[subset]);
+// 			Effects::GBufferFX->SetDiffuseMap(mCharacterInstance1.Model->DiffuseMapSRV[subset]);
+// 			Effects::GBufferFX->SetNormalMap(mCharacterInstance1.Model->NormalMapSRV[subset]);
+// 
+// 			gBufferSkinned->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+// 			mCharacterInstance1.Model->ModelMesh.Draw(md3dImmediateContext, subset);
+// 		}
+// 
+// 		// Instance 2
+// 
+// 		world = XMLoadFloat4x4(&mCharacterInstance2.World);
+// 		worldInvTranspose = MathHelper::InverseTranspose(world);
+// 		worldViewProj = world*view * proj;
+// 
+// 		Effects::GBufferFX->SetWorld(world);
+// 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
+// 		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
+// 		Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
+// 		Effects::GBufferFX->SetBoneTransforms(
+// 			&mCharacterInstance2.FinalTransforms[0],
+// 			mCharacterInstance2.FinalTransforms.size());
+// 
+// 		for (UINT subset = 0; subset < mCharacterInstance1.Model->SubsetCount; ++subset)
+// 		{
+// 			Effects::GBufferFX->SetMaterial(mCharacterInstance1.Model->Mat[subset]);
+// 			Effects::GBufferFX->SetDiffuseMap(mCharacterInstance1.Model->DiffuseMapSRV[subset]);
+// 			Effects::GBufferFX->SetNormalMap(mCharacterInstance1.Model->NormalMapSRV[subset]);
+// 			
+// 			gBufferSkinned->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+// 			mCharacterInstance2.Model->ModelMesh.Draw(md3dImmediateContext, subset);
+// 		}
+// 	}
 
 	md3dImmediateContext->RSSetState(0);
 }
@@ -1380,7 +1384,10 @@ void SkinnedMeshApp::DeferredShadingPass()
 	mDeferred->SetMRT(md3dImmediateContext);
 	BuildGBuffer();
 
-	SDFShadowPass();
+	//SDFShadowPass(sphereModel, mSphereSDFSRV, mSphereWorld[3]);
+	SDFShadowPass(skullModel, mSkullSDFSRV, mSkullWorld);
+	//SDFShadowPass(cylinderModel, mCylinderSDFSRV, mCylWorld[3]);
+
 	//mSDFShadow->ClearShadow(md3dImmediateContext);
 	//
 	// Render the scene to the shadow map.
@@ -1388,7 +1395,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 
 	mSmap->BindDsvAndSetNullRenderTarget(md3dImmediateContext);
 
-	DrawSceneToShadowMap();
+	//DrawSceneToShadowMap();
 
 	md3dImmediateContext->RSSetState(0);
 
@@ -1478,30 +1485,35 @@ void SkinnedMeshApp::DeferredShadingPass()
 	HR(mSwapChain->Present(0, 0));
 }
 
-void SkinnedMeshApp::SDFShadowPass()
+void SkinnedMeshApp::SDFShadowPass(
+	SDFModel* sdfMoel,
+	ID3D11ShaderResourceView* sdfSRV,
+	XMFLOAT4X4 &worldMat)
 {
 	XMMATRIX viewInv;
 	///////////////////////////g pass////////////////////////////////
 	viewInv.r[0] = mCam.GetRightXM();
 	viewInv.r[1] = mCam.GetUpXM();
 	viewInv.r[2] = mCam.GetLookXM();
-	
+
 	mSDFShadow->SetRenderTarget(md3dImmediateContext);
 	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
 	Effects::SDFShadowFX->SetViewInv(viewInv);
 	Effects::SDFShadowFX->SetEyePosW(mCam.GetPosition());
 	Effects::SDFShadowFX->SetLightDirs(mDirLights[1].Direction);
-	XMFLOAT3 bounds = sphereModel->GetBounds();
-	XMFLOAT4 extends = XMFLOAT4(bounds.x * 0.5f, bounds.y * 0.5f, bounds.z * 0.5f,2.0f);
-	XMMATRIX SDFToWordInv0 = XMLoadFloat4x4(&mSphereWorld[3]);
-	SDFToWordInv0.r[3] = -SDFToWordInv0.r[3] + XMLoadFloat4(&extends);
+	XMFLOAT3 bounds = sdfMoel->GetBounds();
+	XMFLOAT4 extends = XMFLOAT4(bounds.x * 0.5f, bounds.y * 0.5f, bounds.z * 0.5f,0.0f);
+	XMMATRIX SDFToWordInv0 = XMLoadFloat4x4(&worldMat);
+	XMVECTOR det;
+	SDFToWordInv0 = XMMatrixInverse(&det, SDFToWordInv0);
+	SDFToWordInv0.r[3] += XMLoadFloat4(&extends);
 
 	Effects::SDFShadowFX->SetSDFBounds0(bounds);
 	Effects::SDFShadowFX->SetSDFToWordInv0(SDFToWordInv0);
 
 	Effects::SDFShadowFX->SetGBuffer0(mDeferred->mGBufferSRV0);
 	Effects::SDFShadowFX->SetDepthMap(mDeferred->mDepthMapSRV);
-	Effects::SDFShadowFX->SetSDF0(mSphereSDFSRV);
+	Effects::SDFShadowFX->SetSDF0(sdfSRV);
 	
 	UINT stride = sizeof(XMFLOAT3);
 	UINT offset = 0;
@@ -1551,45 +1563,45 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	sphereModel		= new SDFModel(sphere);
 	cylinderModel	= new SDFModel(cylinder);
 
-	__int64 startTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
-
-	sphereModel->GenerateSDF(400.0f, false);
-	//cylinderModel->GenerateSDF(20.0f, false);
-	//boxModel->GenerateSDF(20.0f, false);
-	float* sphereData = NULL;
-	unsigned w, h, d;
-	sphereModel->GetSDFData(sphereData, w, h, d);
-	D3D11_TEXTURE3D_DESC texDesc;
-	texDesc.Width = w;					 
-	texDesc.Height = h;
-	texDesc.Depth = d;
-	texDesc.MipLevels = 1;
-	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA subdata;
-	subdata.pSysMem = sphereData;
-	subdata.SysMemPitch = w * sizeof(float);
-	subdata.SysMemSlicePitch = w * d * sizeof(float);
-	ID3D11Texture3D* SDFMap = 0;
-	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
-
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
-	srvDesc.Texture3D.MipLevels = texDesc.MipLevels;
-	srvDesc.Texture3D.MostDetailedMip = 0;
-	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSphereSDFSRV));
-	ReleaseCOM(SDFMap);
-	__int64 endTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
-
-	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
+// 	__int64 startTime;
+// 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+// 
+// 	//sphereModel->GenerateSDF(400.0f, false);
+// 	cylinderModel->GenerateSDF(50.0f, false);
+// 	//boxModel->GenerateSDF(20.0f, false);
+// 	float* cylinderData = NULL;
+// 	unsigned w, h, d;
+// 	cylinderModel->GetSDFData(cylinderData, w, h, d);
+// 	D3D11_TEXTURE3D_DESC texDesc;
+// 	texDesc.Width = w;					 
+// 	texDesc.Height = h;
+// 	texDesc.Depth = d;
+// 	texDesc.MipLevels = 1;
+// 	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+// 	texDesc.Usage = D3D11_USAGE_DEFAULT;
+// 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+// 	texDesc.CPUAccessFlags = 0;
+// 	texDesc.MiscFlags = 0;
+// 
+// 	D3D11_SUBRESOURCE_DATA subdata;
+// 	subdata.pSysMem = cylinderData;
+// 	subdata.SysMemPitch = w * sizeof(float);
+// 	subdata.SysMemSlicePitch = w * d * sizeof(float);
+// 	ID3D11Texture3D* SDFMap = 0;
+// 	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
+// 
+// 
+// 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+// 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+// 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+// 	srvDesc.Texture3D.MipLevels = texDesc.MipLevels;
+// 	srvDesc.Texture3D.MostDetailedMip = 0;
+// 	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mCylinderSDFSRV));
+// 	ReleaseCOM(SDFMap);
+// 	__int64 endTime;
+// 	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
+// 
+// 	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
 
 	// Cache the vertex offsets to each object in the concatenated vertex buffer.
 	mBoxVertexOffset      = 0;
@@ -1745,7 +1757,49 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 	}
 
 	fin.close();
+////////////////////////////////////////////SDF///////////////////////
+	
 
+	__int64 startTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+	skullModel = new SDFModel(vertices, indices);
+	skullModel->GenerateSDF(30.0f, false);
+	//cylinderModel->GenerateSDF(20.0f, false);
+	//boxModel->GenerateSDF(20.0f, false);
+	float* skullData = NULL;
+	unsigned w, h, d;
+	skullModel->GetSDFData(skullData, w, h, d);
+	D3D11_TEXTURE3D_DESC texDesc;
+	texDesc.Width = w;
+	texDesc.Height = h;
+	texDesc.Depth = d;
+	texDesc.MipLevels = 1;
+	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	texDesc.CPUAccessFlags = 0;
+	texDesc.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA subdata;
+	subdata.pSysMem = skullData;
+	subdata.SysMemPitch = w * sizeof(float);
+	subdata.SysMemSlicePitch = w * d * sizeof(float);
+	ID3D11Texture3D* SDFMap = 0;
+	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
+
+
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+	srvDesc.Texture3D.MipLevels = 1;
+	srvDesc.Texture3D.MostDetailedMip = 0;
+	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSkullSDFSRV));
+	ReleaseCOM(SDFMap);
+	__int64 endTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
+
+	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
+////////////////////////////////////////////////////////////////////////
     D3D11_BUFFER_DESC vbd;
     vbd.Usage = D3D11_USAGE_IMMUTABLE;
 	vbd.ByteWidth = sizeof(Vertex::Basic32) * vcount;
@@ -1769,6 +1823,9 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
     D3D11_SUBRESOURCE_DATA iinitData;
 	iinitData.pSysMem = &indices[0];
     HR(md3dDevice->CreateBuffer(&ibd, &iinitData, &mSkullIB));
+
+
+	
 }
 
 void SkinnedMeshApp::BuildScreenQuadGeometryBuffers()
