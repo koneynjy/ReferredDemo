@@ -202,7 +202,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	XMStoreFloat4x4(&mBoxWorld, XMMatrixMultiply(boxScale, boxOffset));
 
 	XMMATRIX skullScale = XMMatrixScaling(0.5f, 0.5f, 0.5f);
-	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, 1.0f, 0.0f);
+	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, 3.0f, 0.0f);
 	XMStoreFloat4x4(&mSkullWorld, XMMatrixMultiply(skullScale, skullOffset));
 
 	for(int i = 0; i < 5; ++i)
@@ -1108,9 +1108,9 @@ void SkinnedMeshApp::DrawSceneToShadowMap()
 
 void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 {
+	static float d = 0.0f;
 	UINT stride = sizeof(Vertex::Basic32);
     UINT offset = 0;
-
 	md3dImmediateContext->IASetInputLayout(InputLayouts::Basic32);
     md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mScreenQuadVB, &stride, &offset);
@@ -1122,7 +1122,10 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 		0.0f, 0.5f, 0.0f, 0.0f,
 		0.0f, 0.0f, 1.0f, 0.0f,
 		0.5f, -0.5f, 0.0f, 1.0f);
-
+	if (GetAsyncKeyState('2') & 0x8000)
+		d += 0.1f * mTimer.DeltaTime();
+	if (GetAsyncKeyState('3') & 0x8000)
+		d -= 0.1f * mTimer.DeltaTime();
 	ID3DX11EffectTechnique* tech = Effects::DebugTexFX->ViewArgbTech;
 	D3DX11_TECHNIQUE_DESC techDesc;
 
@@ -1132,7 +1135,8 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 		Effects::DebugTexFX->SetWorldViewProj(world);
 		Effects::DebugTexFX->SetTexture(srv);
 		Effects::DebugTexFX->SetIntTexture(mDeferred->mStencilMapSRV);
-
+		Effects::DebugTexFX->SetSDF(mSphereSDFSRV);
+		Effects::DebugTexFX->setD(d);
 		tech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(6, 0, 0);
     }
@@ -1205,10 +1209,10 @@ void SkinnedMeshApp::BuildGBuffer()
 	md3dImmediateContext->IASetInputLayout(InputLayouts::PosNormalTexTan);
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mShapesVB, &stride, &offset);
 	md3dImmediateContext->IASetIndexBuffer(mShapesIB, DXGI_FORMAT_R32_UINT, 0);
-
+	md3dImmediateContext->RSSetState(0);
 	if (GetAsyncKeyState('1') & 0x8000)
 		md3dImmediateContext->RSSetState(RenderStates::WireframeRS);
-	md3dImmediateContext->RSSetState(0);
+	
 	
 	D3DX11_TECHNIQUE_DESC techDesc;
 	gBuffer->GetDesc(&techDesc);
@@ -1555,7 +1559,7 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	GeometryGenerator geoGen;
 	geoGen.CreateBox(1.0f, 1.0f, 1.0f, box);
 	geoGen.CreateGrid(20.0f, 30.0f, 50, 40, grid);
-	geoGen.CreateSphere(0.5f, 20, 20, sphere);
+	geoGen.CreateSphere(0.5f, 100, 100, sphere);
 	geoGen.CreateCylinder(0.5f, 0.5f, 3.0f, 15, 15, cylinder);
 
 	boxModel		= new SDFModel(box);
@@ -1564,46 +1568,46 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	cylinderModel	= new SDFModel(cylinder);
 
 // 	__int64 startTime;
-// 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
-// 
-// 	//sphereModel->GenerateSDF(400.0f, false);
-// 	cylinderModel->GenerateSDF(50.0f, false);
-// 	//boxModel->GenerateSDF(20.0f, false);
-// 	float* cylinderData = NULL;
-// 	unsigned w, h, d;
-// 	cylinderModel->GetSDFData(cylinderData, w, h, d);
-// 	D3D11_TEXTURE3D_DESC texDesc;
-// 	texDesc.Width = w;					 
-// 	texDesc.Height = h;
-// 	texDesc.Depth = d;
-// 	texDesc.MipLevels = 1;
-// 	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
-// 	texDesc.Usage = D3D11_USAGE_DEFAULT;
-// 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-// 	texDesc.CPUAccessFlags = 0;
-// 	texDesc.MiscFlags = 0;
-// 
-// 	D3D11_SUBRESOURCE_DATA subdata;
-// 	subdata.pSysMem = cylinderData;
-// 	subdata.SysMemPitch = w * sizeof(float);
-// 	subdata.SysMemSlicePitch = w * d * sizeof(float);
-// 	ID3D11Texture3D* SDFMap = 0;
-// 	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
-// 
-// 
-// 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-// 	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-// 	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
-// 	srvDesc.Texture3D.MipLevels = texDesc.MipLevels;
-// 	srvDesc.Texture3D.MostDetailedMip = 0;
-// 	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mCylinderSDFSRV));
-// 	ReleaseCOM(SDFMap);
-// 	__int64 endTime;
-// 	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
-// 
-// 	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
-
-	// Cache the vertex offsets to each object in the concatenated vertex buffer.
+// 		QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+// 	
+// 		sphereModel->GenerateSDF(200.0f, false);
+// 		//cylinderModel->GenerateSDF(50.0f, false);
+// 		//boxModel->GenerateSDF(20.0f, false);
+// 		float* sphereData = NULL;
+// 		unsigned w, h, d;
+// 		sphereModel->GetSDFData(sphereData, w, h, d);
+// 		D3D11_TEXTURE3D_DESC texDesc;
+// 		texDesc.Width = w;					 
+// 		texDesc.Height = h;
+// 		texDesc.Depth = d;
+// 		texDesc.MipLevels = 1;
+// 		texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+// 		texDesc.Usage = D3D11_USAGE_DEFAULT;
+// 		texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+// 		texDesc.CPUAccessFlags = 0;
+// 		texDesc.MiscFlags = 0;
+// 	
+// 		D3D11_SUBRESOURCE_DATA subdata;
+// 		subdata.pSysMem = sphereData;
+// 		subdata.SysMemPitch = w * sizeof(float);
+// 		subdata.SysMemSlicePitch = w * d * sizeof(float);
+// 		ID3D11Texture3D* SDFMap = 0;
+// 		HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
+// 	
+// 	
+// 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+// 		srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+// 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+// 		srvDesc.Texture3D.MipLevels = texDesc.MipLevels;
+// 		srvDesc.Texture3D.MostDetailedMip = 0;
+// 		HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSphereSDFSRV));
+// 		ReleaseCOM(SDFMap);
+// 		__int64 endTime;
+// 		QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
+// 	
+// 		double t = (endTime - startTime)*mTimer.mSecondsPerCount;
+	
+		// Cache the vertex offsets to each object in the concatenated vertex buffer.
 	mBoxVertexOffset      = 0;
 	mGridVertexOffset     = box.Vertices.size();
 	mSphereVertexOffset   = mGridVertexOffset + grid.Vertices.size();
@@ -1722,7 +1726,7 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
  
 void SkinnedMeshApp::BuildSkullGeometryBuffers()
 {
-	std::ifstream fin("Models/skull.txt");
+	std::ifstream fin("Models/car.txt");
 	
 	if(!fin)
 	{

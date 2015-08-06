@@ -584,7 +584,9 @@ public:
 
 	void SetWorldViewProj(CXMMATRIX M)              { WorldViewProj->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetTexture(ID3D11ShaderResourceView* tex)  { Texture->SetResource(tex); }
+	void SetSDF(ID3D11ShaderResourceView* tex)		{ SDF->SetResource(tex); }
 	void SetIntTexture(ID3D11ShaderResourceView* tex)  { IntTexture->SetResource(tex); }
+	void setD(float f){ d->SetFloat(f); }
 
 	ID3DX11EffectTechnique* ViewArgbTech;
 	ID3DX11EffectTechnique* ViewRedTech;
@@ -593,8 +595,10 @@ public:
 	ID3DX11EffectTechnique* ViewAlphaTech;
 
 	ID3DX11EffectMatrixVariable* WorldViewProj;
+	ID3DX11EffectScalarVariable* d;
 	ID3DX11EffectShaderResourceVariable* Texture;
 	ID3DX11EffectShaderResourceVariable* IntTexture;
+	ID3DX11EffectShaderResourceVariable* SDF;
 };
 #pragma endregion
 

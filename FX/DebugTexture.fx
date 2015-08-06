@@ -7,12 +7,24 @@
 float4x4  gWorldViewProj;
 Texture2D gTexture;
 Texture2D<uint4> gIntTexture;
+Texture3D gSDF;
+
+cbuffer cbPerFrame
+{
+	float d;
+};
+
+cbuffer cbPerSDF
+{
+	float maxvalue;
+};
 
 SamplerState samLinear
 {
 	Filter = MIN_MAG_MIP_LINEAR;
 	AddressU = Wrap;
 	AddressV = Wrap;
+	AddressW = Wrap;
 };
 
 struct VertexIn
@@ -44,7 +56,19 @@ float4 PS(VertexOut pin) : SV_Target
 	/*uint s = gIntTexture[pin.Tex * int2(800,600)].y;
 	float sf = s / 255.0f ;
 	return sf.rrrr;*/
-	return float4(gTexture.Sample(samLinear, pin.Tex).rrr, 0.0f);
+	//return float4(gTexture.Sample(samLinear, pin.Tex).rrr, 0.0f);
+	float v = gSDF.Sample(samLinear, float3(pin.Tex.x, 1.0f - pin.Tex.y, d)).r;
+	if (v > 0)
+	{
+		v *= 0.5f;
+	}
+	else
+	{
+		v *= -0.5f;
+		v = 1.0f - v;
+	}
+
+	return v.rrrr;
 }
 
 float4 PS(VertexOut pin, uniform int index) : SV_Target

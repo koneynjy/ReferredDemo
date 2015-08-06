@@ -554,7 +554,7 @@ struct TkDOPNode
 
 			t.StartIndex = SOATriangles.size();
 			t.NumTriangles = Align<int32>(NumTris, 4) / 4;
-			SOATriangles.resize(t.StartIndex + t.NumTriangles, FTriangleSOA::GetZero());//AddZeroed
+			SOATriangles.insert(SOATriangles.end(), t.NumTriangles, FTriangleSOA::GetZero());//AddZeroed
 
 			int32 BuildTriIndex = Start;
 			for (uint32 SOAIndex = 0; SOAIndex < t.NumTriangles; ++SOAIndex)

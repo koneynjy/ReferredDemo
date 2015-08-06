@@ -465,6 +465,8 @@ DebugTexEffect::DebugTexEffect(ID3D11Device* device, const std::wstring& filenam
 
 	WorldViewProj = mFX->GetVariableByName("gWorldViewProj")->AsMatrix();
 	Texture       = mFX->GetVariableByName("gTexture")->AsShaderResource();
+	SDF			  = mFX->GetVariableByName("gSDF")->AsShaderResource();
+	d			  = mFX->GetVariableByName("d")->AsScalar();
 	IntTexture    = mFX->GetVariableByName("gIntTexture")->AsShaderResource();
 }
 
