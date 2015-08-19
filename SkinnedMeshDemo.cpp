@@ -1769,7 +1769,7 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 	__int64 startTime;
 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
 	skullModel = new SDFModel(vertices, indices);
-	skullModel->GenerateSDF(30.0f, false);
+	skullModel->GenerateSDF(10.0f, false);
 	float* skullData = NULL;
 	unsigned w, h, d;
 	skullModel->GetSDFData(skullData, w, h, d);

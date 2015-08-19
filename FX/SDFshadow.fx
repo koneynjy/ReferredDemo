@@ -132,20 +132,20 @@ float4 PS(VertexOut pin) : SV_Target
 		float3 start = i1;
 		float3 scale = float3(1.0f,1.0f,1.0f) / gSDFBounds0;
 		float step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
-		if (step <= 0.0001f) return shadow;
+		if (step <= 0.01f) return shadow;
 		start += step * dir;
 		len += step;
-		[unroll(10)] 
+		[unroll(50)] 
 		for (int i = 0; i <= steps; ++i)
 		{
 			if (len >= length) break;
 			//float3 uvw = start * scale;
 			step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
-			if (step <= .0001f){
+			if (step <= .01f){
 				shadow.r = 0.0f;
 				break;
 			}
-			if (step < 0.1f) step = 0.1f;
+			if (step < 0.2f) step = 0.2f;
 			len += step;
 			start += step * dir;
 		}
