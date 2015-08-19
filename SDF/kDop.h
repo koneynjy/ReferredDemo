@@ -458,6 +458,7 @@ struct TkDOPNode
 			int32 BestPlane = -1;
 			float BestMean = 0.f;
 			float BestVariance = 0.f;
+			FBox fbox(0);
 			// Determine how to split using the splatter algorithm
 			for (int32 nPlane = 0; nPlane < NUM_PLANES; nPlane++)
 			{
@@ -473,11 +474,15 @@ struct TkDOPNode
 				}
 				// Divide by the number of triangles to get the average
 				Mean /= float(NumTris);
+				//计算方差
 				// Compute variance of the triangle list
 				for (int32 nTriangle = Start; nTriangle < Start + NumTris; nTriangle++)
 				{
 					// Project the centroid again
 					float Dot = BuildTriangles[nTriangle].GetCentroid()[nPlane];
+					fbox += BuildTriangles[nTriangle].V0;
+					fbox += BuildTriangles[nTriangle].V1;
+					fbox += BuildTriangles[nTriangle].V2;
 					// Now calculate the variance and accumulate it
 					Variance += (Dot - Mean) * (Dot - Mean);
 				}
@@ -493,32 +498,42 @@ struct TkDOPNode
 			}
 			// Now that we have the plane to split on, work through the triangle
 			// list placing them on the left or right of the splitting plane
-			int32 Left = Start - 1;
-			int32 Right = Start + NumTris;
+//			int32 Left = Start - 1;
+//			int32 Right = Start + NumTris;
 			// Keep working through until the left index passes the right
-			while (Left < Right)
+// 			while (Left < Right)
+// 			{
+// 				float Dot;
+// 				// Find all the triangles to the "left" of the splitting plane
+// 				do
+// 				{
+// 					Dot = BuildTriangles[++Left].GetCentroid()[BestPlane];
+// 				} while (Dot < BestMean && Left < Right);
+// 				// Find all the triangles to the "right" of the splitting plane
+// 				do
+// 				{
+// 					Dot = BuildTriangles[--Right].GetCentroid()[BestPlane];
+// 				} while (Dot >= BestMean && Right > 0 && Left < Right);
+// 				// Don't swap the triangle data if we just hit the end
+// 				if (Left < Right)
+// 				{
+// 					// Swap the triangles since they are on the wrong sides of the
+// 					// splitting plane
+// 					FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> Temp = BuildTriangles[Left];
+// 					BuildTriangles[Left] = BuildTriangles[Right];
+// 					BuildTriangles[Right] = Temp;
+// 				}
+// 			}
+			int32 Left = Start;
+			int32 Right = Start;
+			for (; Right < Start + NumTris; Right++)
 			{
-				float Dot;
-				// Find all the triangles to the "left" of the splitting plane
-				do
+				if (BuildTriangles[Right].GetCentroid()[BestPlane] < BestMean)
 				{
-					Dot = BuildTriangles[++Left].GetCentroid()[BestPlane];
-				} while (Dot < BestMean && Left < Right);
-				// Find all the triangles to the "right" of the splitting plane
-				do
-				{
-					Dot = BuildTriangles[--Right].GetCentroid()[BestPlane];
-				} while (Dot >= BestMean && Right > 0 && Left < Right);
-				// Don't swap the triangle data if we just hit the end
-				if (Left < Right)
-				{
-					// Swap the triangles since they are on the wrong sides of the
-					// splitting plane
-					FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> Temp = BuildTriangles[Left];
-					BuildTriangles[Left] = BuildTriangles[Right];
-					BuildTriangles[Right] = Temp;
+					std::swap(BuildTriangles[Left++], BuildTriangles[Right]);
 				}
 			}
+
 			// Check for wacky degenerate case where more than GKDOPMaxTrisPerLeaf
 			// fall all in the same kDOP
 			if (Left == Start + NumTris || Right == Start)
@@ -553,7 +568,7 @@ struct TkDOPNode
 			FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> EmptyTriangle(0, FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0));
 
 			t.StartIndex = SOATriangles.size();
-			t.NumTriangles = Align<int32>(NumTris, 4) / 4;
+			t.NumTriangles = Align<int32>(NumTris, 4) / 4; //Numtris / 4 向上取整
 			SOATriangles.insert(SOATriangles.end(), t.NumTriangles, FTriangleSOA::GetZero());//AddZeroed
 
 			int32 BuildTriIndex = Start;

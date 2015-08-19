@@ -28,6 +28,7 @@
 #include "DeferredShading.h"
 #include "SDF.h"
 #include "SDFShadow.h"
+//#pragma optimize("", off)
 //#define DEBUGTEX
 struct BoundingSphere
 {
@@ -201,7 +202,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	XMMATRIX boxOffset = XMMatrixTranslation(0.0f, 0.5f, 0.0f);
 	XMStoreFloat4x4(&mBoxWorld, XMMatrixMultiply(boxScale, boxOffset));
 
-	XMMATRIX skullScale = XMMatrixScaling(0.5f, 0.5f, 0.5f);
+	XMMATRIX skullScale = XMMatrixScaling(0.125f, 0.125f, 0.125f);
 	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, 3.0f, 0.0f);
 	XMStoreFloat4x4(&mSkullWorld, XMMatrixMultiply(skullScale, skullOffset));
 
@@ -1135,7 +1136,7 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 		Effects::DebugTexFX->SetWorldViewProj(world);
 		Effects::DebugTexFX->SetTexture(srv);
 		Effects::DebugTexFX->SetIntTexture(mDeferred->mStencilMapSRV);
-		Effects::DebugTexFX->SetSDF(mSphereSDFSRV);
+		Effects::DebugTexFX->SetSDF(mSkullSDFSRV);
 		Effects::DebugTexFX->setD(d);
 		tech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(6, 0, 0);
@@ -1430,7 +1431,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	//////////////////////////shading pass////////////////////////
 	
 #ifdef DEBUGTEX
-	DrawScreenQuad(mSDFShadow->mSDFShadowSRV);
+	DrawScreenQuad(mSkullSDFSRV);
 	//DrawScreenQuad(mDeferred->mGBufferSRV1);
 #else
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
@@ -1557,9 +1558,9 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 	GeometryGenerator::MeshData cylinder;
 
 	GeometryGenerator geoGen;
-	geoGen.CreateBox(1.0f, 1.0f, 1.0f, box);
+	geoGen.CreateBox(1.0f, 1.0f, 1.0f, 1, box);
 	geoGen.CreateGrid(20.0f, 30.0f, 50, 40, grid);
-	geoGen.CreateSphere(0.5f, 100, 100, sphere);
+	geoGen.CreateSphere(1.5f, 200, 200, sphere);
 	geoGen.CreateCylinder(0.5f, 0.5f, 3.0f, 15, 15, cylinder);
 
 	boxModel		= new SDFModel(box);
@@ -1572,7 +1573,7 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
 // 	
 // 		sphereModel->GenerateSDF(200.0f, false);
 // 		//cylinderModel->GenerateSDF(50.0f, false);
-// 		//boxModel->GenerateSDF(20.0f, false);
+// 		//boxModel->GenerateSDF(200.0f, false);
 // 		float* sphereData = NULL;
 // 		unsigned w, h, d;
 // 		sphereModel->GetSDFData(sphereData, w, h, d);
@@ -1726,7 +1727,7 @@ void SkinnedMeshApp::BuildShapeGeometryBuffers()
  
 void SkinnedMeshApp::BuildSkullGeometryBuffers()
 {
-	std::ifstream fin("Models/car.txt");
+	std::ifstream fin("Models/skull.txt");
 	
 	if(!fin)
 	{
@@ -1746,6 +1747,7 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 	for(UINT i = 0; i < vcount; ++i)
 	{
 		fin >> vertices[i].Pos.x >> vertices[i].Pos.y >> vertices[i].Pos.z;
+		XMStoreFloat3(&vertices[i].Pos, XMLoadFloat3(&vertices[i].Pos) * 4);
 		fin >> vertices[i].Normal.x >> vertices[i].Normal.y >> vertices[i].Normal.z;
 	}
 
@@ -1768,8 +1770,6 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
 	skullModel = new SDFModel(vertices, indices);
 	skullModel->GenerateSDF(30.0f, false);
-	//cylinderModel->GenerateSDF(20.0f, false);
-	//boxModel->GenerateSDF(20.0f, false);
 	float* skullData = NULL;
 	unsigned w, h, d;
 	skullModel->GetSDFData(skullData, w, h, d);

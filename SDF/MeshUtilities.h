@@ -352,6 +352,7 @@ void GenerateSignedDistanceFieldVolumeData(
 						V2));
 				}
 			}
+			
 		}
 
 		TkDOPTree<const FMeshBuildDataProvider, uint32> kDopTree;

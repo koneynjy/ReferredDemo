@@ -5,13 +5,12 @@
 #include "GeometryGenerator.h"
 #include "MathHelper.h"
 
-void GeometryGenerator::CreateBox(float width, float height, float depth, MeshData& meshData)
+void GeometryGenerator::CreateBox(float width, float height, float depth, int scale, MeshData& meshData)
 {
 	//
 	// Create the vertices.
 	//
-
-	Vertex v[24];
+	std::vector<Vertex> v(24);
 
 	float w2 = 0.5f*width;
 	float h2 = 0.5f*height;
@@ -53,13 +52,13 @@ void GeometryGenerator::CreateBox(float width, float height, float depth, MeshDa
 	v[22] = Vertex(+w2, +h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f);
 	v[23] = Vertex(+w2, -h2, +d2, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
-	meshData.Vertices.assign(&v[0], &v[24]);
+	meshData.Vertices.assign(v.begin(), v.end());
  
 	//
 	// Create the indices.
 	//
 
-	UINT i[36];
+	std::vector<UINT> i(36);
 
 	// Fill in the front face index data
 	i[0] = 0; i[1] = 1; i[2] = 2;
@@ -85,7 +84,7 @@ void GeometryGenerator::CreateBox(float width, float height, float depth, MeshDa
 	i[30] = 20; i[31] = 21; i[32] = 22;
 	i[33] = 20; i[34] = 22; i[35] = 23;
 
-	meshData.Indices.assign(&i[0], &i[36]);
+	meshData.Indices.assign(i.begin(), i.end());
 }
 
 void GeometryGenerator::CreateSphere(float radius, UINT sliceCount, UINT stackCount, MeshData& meshData)

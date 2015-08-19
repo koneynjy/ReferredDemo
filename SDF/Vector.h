@@ -583,7 +583,7 @@ public:
 	* @param LengthSquaredTolerance Tolerance against squared length.
 	* @return true if the vector is a unit vector within the specified tolerance.
 	*/
-	FORCEINLINE bool IsUnit(float LengthSquaredTolerance = KINDA_SMALL_NUMBER) const;
+	FORCEINLINE bool IsUnit(float LengthSquaredTolerance = HUGE_SMALL_NUMBER) const;
 
 	/**
 	* Convert a direction vector into a 'heading' angle.
@@ -735,6 +735,7 @@ public:
 	explicit FVector4(float InX = 0.0f, float InY = 0.0f, float InZ = 0.0f, float InW = 1.0f);
 
 	FVector4(const FVector& v);
+	FVector4(const FVector4& v);
 
 public:
 
@@ -1763,6 +1764,11 @@ FORCEINLINE FVector4::FVector4(float InX, float InY, float InZ, float InW)
 FORCEINLINE FVector4::FVector4(const FVector& V)
 	: X(V.X), Y(V.Y), Z(V.Z), W(1.0f)
 {}
+
+FORCEINLINE FVector4::FVector4(const FVector4& V)
+: X(V.X), Y(V.Y), Z(V.Z), W(V.W)
+{}
+
 
 FORCEINLINE float& FVector4::operator[](int32 ComponentIndex)
 {
