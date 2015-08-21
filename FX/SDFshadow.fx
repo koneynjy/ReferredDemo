@@ -93,7 +93,7 @@ bool IntersectBounds(float3 start, float3 dir, float3 bounds,
 			t1 = t[mint];
 		}
 		length = t2 - t1;
-		steps = (int)(length / 0.001f);
+		steps = (int)(length / 0.2f);
 		return true;
 	}
 
@@ -126,31 +126,43 @@ float4 PS(VertexOut pin) : SV_Target
 	float length, len = 0;
 	float4 shadow = float4(1.0f, 0, 0, 0);
 	float boundMax = max(gSDFBounds0.x, max(gSDFBounds0.y, gSDFBounds0.z)) * 0.5f;
+	float minstep;
 	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length))
 	{
 		//return float4(0.0f,0,0,0);
 		float3 start = i1;
 		float3 scale = float3(1.0f,1.0f,1.0f) / gSDFBounds0;
 		float step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
+		minstep = step;
+		float smallstep = length / 10;
 		if (step <= 0.01f) return shadow;
+		if (step < smallstep) step = smallstep;
 		start += step * dir;
 		len += step;
-		[unroll(50)] 
-		for (int i = 0; i <= steps; ++i)
+		for (int i = 0; i < 10; ++i)
 		{
 			if (len >= length) break;
 			//float3 uvw = start * scale;
 			step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
-			if (step <= .01f){
+			minstep = min(minstep, step);
+			if (step <= 0.0f){
 				shadow.r = 0.0f;
 				break;
 			}
-			if (step < 0.2f) step = 0.2f;
+			if (step < smallstep) step = smallstep;
+			//step *= 1.25f;
 			len += step;
 			start += step * dir;
+			if (len > length) break;
 		}
 	}
 	//shadow = (abs(gSDF0.Sample(samLinear, float3(0.5f, 0.5f, 0.5f)).r) / 3.0f).rrrr;
+	if (minstep < 0.1f)	 {
+		shadow.r = 0.0f;
+		return shadow;
+	}
+	if (minstep < 1.0f)
+		return shadow * minstep;
 	return shadow;
 }
 
