@@ -18,6 +18,7 @@ Texture2D gDepthMap;
 Texture2D gGBuffer0;
 Texture2D gGBuffer1;
 texture2D gSDFShadow;
+texture2D gSSRMap;
 
 SamplerState samLinear
 {
@@ -102,7 +103,7 @@ float4 PS(VertexOut pin) : SV_Target
 		specular += shadow[i] * S;
 	}
 
-	litColor = ambient + diffuse + specular;
+	litColor = ambient + diffuse + specular + gSSRMap.Sample(samLinear, pin.uv) * 0.5f;
 
 	return litColor;
 }

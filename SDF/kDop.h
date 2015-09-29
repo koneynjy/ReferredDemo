@@ -7,6 +7,7 @@
 #include "sse.h"
 #include "Matrix.h"
 #include "Box.h"
+#include "Material.h"
 
 
 // Indicates how many "k / 2" there are in the k-DOP. 3 == AABB == 6 DOP. The code relies on this being 3.
@@ -27,6 +28,14 @@ struct FkHitResult
 		, Item(INDEX_NONE)
 	{
 	}
+};
+
+struct FVector2DSOA
+{
+	/** X = (v0.x, v1.x, v2.x, v3.x) */
+	VectorRegister	X;
+	/** Y = (v0.y, v1.y, v2.y, v3.y) */
+	VectorRegister	Y;
 };
 
 /**
@@ -67,6 +76,7 @@ struct FTriangleSOA
 	/** Triangle normal (including -W for a plane) for each of the 4 triangles. */
 	FVector4SOA	Normals;
 	/** A 32-bit payload value for each of the 4 triangles. */
+	FVector2DSOA UVs[3];
 	uint32		Payload[4];
 	static FTriangleSOA GetZero(){
 		FTriangleSOA ret;
@@ -186,6 +196,51 @@ static const VectorRegister GZeroVectorRegister = { 0, 0, 0, 0 };
 
 static const VectorRegister VectorNegativeOne = MakeVectorRegister(-1.0f, -1.0f, -1.0f, -1.0f);
 
+FORCEINLINE VectorRegister alphaCheck(
+	TArray<FMaterial>& mat, const uint32 playload[], VectorRegister u, VectorRegister v)
+{
+	float width[4], height[4], cnt[4];
+	int noTest[4] = {0, 0, 0, 0};
+	for (int i = 0; i < 4; i++)
+	{
+		if (playload[i] != -1)
+		{
+			width[i] = mat[playload[i]].diffuse.width;
+			cnt[i] = mat[playload[i]].diffuse.byteCount;
+			height[i] = mat[playload[i]].diffuse.height;
+			noTest[i] = -(!mat[playload[i]].alphaTest);
+		}
+	}
+	VectorRegister cntVec = VectorLoad(cnt);
+	VectorRegister widthVec = VectorMultiply(cntVec, VectorLoad(width));
+	VectorRegister heightVec = VectorLoad(height);
+	VectorRegister noTestVec = VectorLoad((float*)noTest);
+
+	VectorRegister offset = VectorMultiplyAdd(
+		widthVec,
+		VectorMultiply(heightVec, v),
+		VectorMultiply(widthVec, u)
+		);
+	VectorRegister ugez = VectorMask_GE(u, VectorZero());
+	VectorRegister ule1 = VectorMask_LE(u, VectorOne());
+	VectorRegister vgez = VectorMask_GE(v, VectorZero());
+	VectorRegister vle1 = VectorMask_LE(v, VectorOne());
+	VectorRegister valid = VectorBitwiseAND(
+		VectorBitwiseAND(ugez, ule1), 
+		VectorBitwiseAND(vgez, vle1)
+	);
+
+	int alphaTestRes[4] = {0,0,0,0};
+	for (int i = 0; i < 4; i++)
+	{
+		if (playload[i] != -1 && valid.m128_f32[i])
+		{
+			alphaTestRes[i] = mat[playload[i]].SampleAlphaTest(offset.m128_f32[i]);
+		}
+	}
+	return VectorBitwiseOr(VectorLoad((float*)alphaTestRes), noTestVec);
+}
+
 /**
 * Line vs triangle intersection test. Tests 1 line against 4 triangles at once.
 *
@@ -196,7 +251,10 @@ static const VectorRegister VectorNegativeOne = MakeVectorRegister(-1.0f, -1.0f,
 * @param IntersectionTime	[in/out] Best intersection time so far (0..1), as in: IntersectionPoint = Start + IntersectionTime * Dir.
 * @return			Index (0-3) to specify which of the 4 triangles the line intersected, or -1 if none was found.
 */
-int32 appLineCheckTriangleSOA(const FVector3SOA& Start, const FVector3SOA& End, const FVector3SOA& Dir, const FTriangleSOA& Triangle4, float& InOutIntersectionTime)
+int32 appLineCheckTriangleSOA(
+	const FVector3SOA& Start, const FVector3SOA& End, const FVector3SOA& Dir, 
+	const FTriangleSOA& Triangle4, float& InOutIntersectionTime, TArray<FMaterial>& alphaCheckMat
+	)
 {
 	VectorRegister TriangleMask;
 
@@ -209,7 +267,7 @@ int32 appLineCheckTriangleSOA(const FVector3SOA& Start, const FVector3SOA& End, 
 	EndDist = VectorMultiplyAdd(Triangle4.Normals.X, End.X, Triangle4.Normals.W);
 	EndDist = VectorMultiplyAdd(Triangle4.Normals.Y, End.Y, EndDist);
 	EndDist = VectorMultiplyAdd(Triangle4.Normals.Z, End.Z, EndDist);
-
+	//平面测试，起点终点都在平面一边的没有交点
 	// Are both end-points of the line on the same side of the triangle (or parallel to the triangle plane)?
 	TriangleMask = VectorMask_LE(VectorMultiply(StartDist, EndDist), GSmallNegativeNumber);
 	if (VectorMaskBits(TriangleMask) == 0)
@@ -233,7 +291,12 @@ int32 appLineCheckTriangleSOA(const FVector3SOA& Start, const FVector3SOA& End, 
 	const VectorRegister IntersectionX = VectorMultiplyAdd(Dir.X, Time, Start.X);
 	const VectorRegister IntersectionY = VectorMultiplyAdd(Dir.Y, Time, Start.Y);
 	const VectorRegister IntersectionZ = VectorMultiplyAdd(Dir.Z, Time, Start.Z);
+	VectorRegister Total = VectorZero();
 
+#ifdef _SDFALPHATEST
+	VectorRegister u = VectorZero(), v = VectorZero();
+#endif
+	
 	// Check if the point of intersection is inside the triangle's edges.
 	for (int32 SideIndex = 0; SideIndex < 3; SideIndex++)
 	{
@@ -251,12 +314,34 @@ int32 appLineCheckTriangleSOA(const FVector3SOA& Start, const FVector3SOA& End, 
 		DotW = VectorMultiply(SideDirectionX, IntersectionX);
 		DotW = VectorMultiplyAdd(SideDirectionY, IntersectionY, DotW);
 		DotW = VectorMultiplyAdd(SideDirectionZ, IntersectionZ, DotW);
-		TriangleMask = VectorBitwiseAND(TriangleMask, VectorMask_LT(VectorSubtract(DotW, SideW), GSmallNumber));
+		
+		VectorRegister component = VectorSubtract(DotW, SideW);
+		//calculate UV for the hit point
+#ifdef _SDFALPHATEST
+		u = VectorMultiplyAdd(Triangle4.UVs[(SideIndex + 2) % 3].X, component, u);
+		v = VectorMultiplyAdd(Triangle4.UVs[(SideIndex + 2) % 3].Y, component, v);
+		Total = VectorAdd(Total, component);
+#endif
+		
+		TriangleMask = VectorBitwiseAND(TriangleMask, VectorMask_LT(component, GSmallNumber));
 		if (VectorMaskBits(TriangleMask) == 0)
 		{
 			return -1;
 		}
 	}
+
+#ifdef _SDFALPHATEST
+	u = VectorDivide(u, Total);
+	v = VectorDivide(v, Total);
+
+	TriangleMask = VectorBitwiseAND(TriangleMask, alphaCheck(alphaCheckMat, Triangle4.Payload, u, v));
+
+	if (VectorMaskBits(TriangleMask) == 0)
+	{
+		return -1;
+	}
+#endif
+	
 
 	// Set all non-hitting times to 1.0
 	Time = VectorSelect(TriangleMask, Time, VectorOne());
@@ -294,6 +379,8 @@ struct FkDOPBuildCollisionTriangle
 	*/
 	FVector4 V2;
 
+	FVector2D uv0, uv1, uv2;
+
 	/** The material of this triangle */
 	KDOP_IDX_TYPE MaterialIndex;
 
@@ -315,11 +402,20 @@ struct FkDOPBuildCollisionTriangle
 	*/
 	FkDOPBuildCollisionTriangle(
 		KDOP_IDX_TYPE InMaterialIndex,
-		const FVector4& vert0, const FVector4& vert1, const FVector4& vert2) :
-		V0(vert0), V1(vert1), V2(vert2),
+		const FVector4& vert0, const FVector4& vert1, const FVector4& vert2,
+		const FVector2D& uvcord0, const FVector2D& uvcord1, const FVector2D& uvcord2
+		) :
+		V0(vert0), V1(vert1), V2(vert2), uv0(uvcord0), uv1(uvcord1), uv2(uvcord2),
 		MaterialIndex(InMaterialIndex)
 	{
 	}
+	FkDOPBuildCollisionTriangle(KDOP_IDX_TYPE InMaterialIndex) :
+		V0(FVector(0)), V1(FVector(0)), V2(FVector(0)), 
+		uv0(FVector2D(0, 0)), uv1(FVector2D(0, 0)), uv2(FVector2D(0, 0)),
+		MaterialIndex(InMaterialIndex)
+	{
+	}
+
 };
 
 // Forward declarations
@@ -565,7 +661,7 @@ struct TkDOPNode
 
 			// "NULL triangle", used when a leaf can't fill all 4 triangles in a FTriangleSOA.
 			// No line should ever hit these triangles, set the values so that it can never happen.
-			FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> EmptyTriangle(0, FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0), FVector4(0, 0, 0, 0));
+			FkDOPBuildCollisionTriangle<KDOP_IDX_TYPE> EmptyTriangle(0);
 
 			t.StartIndex = SOATriangles.size();
 			t.NumTriangles = Align<int32>(NumTris, 4) / 4; //Numtris / 4 向上取整
@@ -596,6 +692,14 @@ struct TkDOPNode
 				SOA.Positions[2].X = VectorSet(Tris[0]->V2.X, Tris[1]->V2.X, Tris[2]->V2.X, Tris[3]->V2.X);
 				SOA.Positions[2].Y = VectorSet(Tris[0]->V2.Y, Tris[1]->V2.Y, Tris[2]->V2.Y, Tris[3]->V2.Y);
 				SOA.Positions[2].Z = VectorSet(Tris[0]->V2.Z, Tris[1]->V2.Z, Tris[2]->V2.Z, Tris[3]->V2.Z);
+
+				SOA.UVs[0].X = VectorSet(Tris[0]->uv0.X, Tris[1]->uv0.X, Tris[2]->uv0.X, Tris[3]->uv0.X);
+				SOA.UVs[0].Y = VectorSet(Tris[0]->uv0.Y, Tris[1]->uv0.Y, Tris[2]->uv0.Y, Tris[3]->uv0.Y);
+				SOA.UVs[1].X = VectorSet(Tris[0]->uv1.X, Tris[1]->uv1.X, Tris[2]->uv1.X, Tris[3]->uv1.X);
+				SOA.UVs[1].Y = VectorSet(Tris[0]->uv1.Y, Tris[1]->uv1.Y, Tris[2]->uv1.Y, Tris[3]->uv1.Y);
+				SOA.UVs[2].X = VectorSet(Tris[0]->uv2.X, Tris[1]->uv2.X, Tris[2]->uv2.X, Tris[3]->uv2.X);
+				SOA.UVs[2].Y = VectorSet(Tris[0]->uv2.Y, Tris[1]->uv2.Y, Tris[2]->uv2.Y, Tris[3]->uv2.Y);
+				
 
 				const FVector4& Tris0LocalNormal = Tris[0]->GetLocalNormal();
 				const FVector4& Tris1LocalNormal = Tris[1]->GetLocalNormal();
@@ -809,7 +913,8 @@ struct TkDOPNode
 	*
 	* @param Check -- The aggregated line check data
 	*/
-	bool LineCheckPreCalculated(TkDOPLineCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>& Check, const FVector4& NodeHitTime, TTraversalHistory<KDOP_IDX_TYPE> History, int32* NodeHit) const
+	bool LineCheckPreCalculated(TkDOPLineCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>& Check, const FVector4& NodeHitTime, 
+		TTraversalHistory<KDOP_IDX_TYPE> History, int32* NodeHit) const
 	{
 		bool bHit = 0;
 		// If this is a node, check the two child nodes and pick the closest one
@@ -890,16 +995,16 @@ struct TkDOPNode
 		for (KDOP_IDX_TYPE SOAIndex = t.StartIndex; SOAIndex < (t.StartIndex + t.NumTriangles); SOAIndex++)
 		{
 			const FTriangleSOA& TriangleSOA = Check.SOATriangles[SOAIndex];
-			int32 SubIndex = appLineCheckTriangleSOA(Check.StartSOA, Check.EndSOA, Check.DirSOA, TriangleSOA, Check.Result->Time);
+			int32 SubIndex = appLineCheckTriangleSOA(Check.StartSOA, Check.EndSOA, Check.DirSOA, TriangleSOA, Check.Result->Time, Check.AlphaCheckMat);
 			if (SubIndex >= 0)
 			{
 				bHit = true;
 				Check.LocalHitNormal.X = VectorGetComponent(TriangleSOA.Normals.X, SubIndex);
 				Check.LocalHitNormal.Y = VectorGetComponent(TriangleSOA.Normals.Y, SubIndex);
 				Check.LocalHitNormal.Z = VectorGetComponent(TriangleSOA.Normals.Z, SubIndex);
-				Check.Result->Item = TriangleSOA.Payload[SubIndex];
+				Check.Result->Item = Check.AlphaCheckMat[TriangleSOA.Payload[SubIndex]].twoSided ? 1 : 0;
 				Check.HitNodeIndex = History.GetOldestNode();
-
+				Check.matID = TriangleSOA.Payload[SubIndex];
 				// Early out if we don't care about the closest intersection.
 				if (!Check.bFindClosestIntersection)
 				{
@@ -1059,6 +1164,9 @@ public TkDOPCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>
 	/** Direction of the line (not normalized, just EndSOA-StartSOA), where each component is replicated into their own vector registers. */
 	FVector3SOA	DirSOA;
 
+	TArray<FMaterial> &AlphaCheckMat;
+
+	int matID;
 	/**
 	* Sets up the FkDOPLineCollisionCheck structure for performing line checks
 	* against a kDOPTree. Initializes all of the variables that are used
@@ -1074,14 +1182,16 @@ public TkDOPCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>
 	TkDOPLineCollisionCheck(const FVector4& InStart, const FVector4& InEnd,
 		bool bInbFindClosestIntersection,
 		const COLL_DATA_PROVIDER& InCollDataProvider,
-		FkHitResult* InResult)
+		FkHitResult* InResult,
+		TArray<FMaterial>& alphaCheckMat)
 		:
 		TkDOPCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>(InCollDataProvider),
 		Result(InResult),
 		Start(InStart),
 		End(InEnd),
 		bFindClosestIntersection(bInbFindClosestIntersection),
-		HitNodeIndex(0xFFFFFFFF)
+		HitNodeIndex(0xFFFFFFFF),
+		AlphaCheckMat(alphaCheckMat)
 	{
 			const FMatrix& WorldToLocal = TkDOPCollisionCheck<COLL_DATA_PROVIDER, KDOP_IDX_TYPE>::CollDataProvider.GetWorldToLocal();
 			// Move start and end to local space

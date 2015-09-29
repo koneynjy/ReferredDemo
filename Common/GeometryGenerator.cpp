@@ -656,3 +656,123 @@ void GeometryGenerator::CreateFarPlaneQuad(MeshData& meshData, Camera &camera)
 	meshData.Indices[4] = 2;
 	meshData.Indices[5] = 3;
 }
+
+
+//tag the plane of the box
+//0 z- 1 z+
+//2 x- 3 x+
+//4 y- 5 y+
+static const XMFLOAT3 boxNormal[6] = {
+	XMFLOAT3( 0, 0,-1),
+	XMFLOAT3( 0, 0, 1),
+	XMFLOAT3(-1, 0, 0),
+	XMFLOAT3( 1, 0, 0),
+	XMFLOAT3( 0,-1, 0),
+	XMFLOAT3( 0, 1, 0)
+};
+
+// static XMFLOAT3 boxVertex[8] =
+// {
+// 	XMFLOAT3(-1,-1,-1),
+// 	XMFLOAT3( 1,-1,-1),
+// 	XMFLOAT3( 1, 1,-1),
+// 	XMFLOAT3(-1, 1,-1),
+// 	XMFLOAT3(-1, 1, 1),
+// 	XMFLOAT3( 1,-1, 1),
+// 	XMFLOAT3( 1,-1, 1),
+// 	XMFLOAT3(-1, 1, 1),
+// };
+
+static const int boxPlanePoint[6][4] =
+{
+	{3, 2, 1, 0},//z-
+	{4, 5, 6, 7},//z+
+	{2, 3, 7, 6},//x-
+	{0, 1, 5, 4},//x+
+	{0, 4, 7, 3},//y-
+	{1, 2, 6, 5},//y+
+};
+
+//      6____________5
+//		/|		    /|
+//	   / |		   / |		 y	 z
+//	 2/___________/1 |		 |	/
+//	  |	7|________|__|4		 | /
+//	  |	 /        |  /		 |/_______ x
+//	  |	/		  | /
+//	 3|/__________|/0
+
+void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, Camera &camera, XMVECTOR boxVert[], XMFLOAT3 lightDir)
+{
+	static const float tmin = 10000.0f;
+	XMVECTOR dir = XMLoadFloat3(&lightDir);
+	int idcnt = 0;
+	int idv[16];
+	bool passp[6] = {0,0,0,0,0,0};
+	short passe[8][8]; //check for shared edge
+	memset(passe, 0, sizeof(passe));
+	memset(idv, -1, sizeof(idv));
+	//check for plane needed
+	for (int i = 0; i < 6; i++)
+	{
+		passp[i] = XMVector3Dot(XMLoadFloat3(boxNormal + i), dir).m128_f32[0] < 0;
+		if (passp[i])
+		{
+			for (int j = 0; j < 4; j++)
+			{
+				passe[boxPlanePoint[i][j]][boxPlanePoint[i][j + 1 & 3]] ++;
+				passe[boxPlanePoint[i][j + 1 & 3]][boxPlanePoint[i][j]]++;
+			}
+		}
+	}
+
+	for (int i = 0; i < 6; i++)
+	{
+		if (passp[i])
+		{
+			const int* pt = boxPlanePoint[i];
+			for (int j = 0; j < 4; j++){
+				if (idv[pt[j]] < 0)
+				{
+					idv[pt[j]] = vs.size();
+					vs.push_back(XMFLOAT3());
+					XMStoreFloat3(&vs.back(), boxVert[pt[j]]);
+				}
+			}
+
+			is.push_back(idv[pt[0]]);  is.push_back(idv[pt[1]]); is.push_back(idv[pt[2]]);
+			is.push_back(idv[pt[0]]);  is.push_back(idv[pt[2]]); is.push_back(idv[pt[3]]);
+
+
+
+			for (int j = 0; j < 4; j++)
+			{
+				if (passe[pt[j]][pt[j + 1 & 3]] == 1)
+				{
+					int u = pt[j + 1 & 3], v = pt[j];
+					if (idv[v + 8] < 0)
+					{
+						idv[v + 8] = vs.size();
+						vs.push_back(XMFLOAT3());
+						XMStoreFloat3(&vs.back(), boxVert[v] + dir * tmin);
+					}
+
+					if (idv[u + 8] < 0)
+					{
+						idv[u + 8] = vs.size();
+						vs.push_back(XMFLOAT3());
+						XMStoreFloat3(&vs.back(), 
+							boxVert[u + 8] + dir * tmin);
+					}
+
+					is.push_back(idv[u]); is.push_back(idv[v]); is.push_back(idv[v + 8]); 
+					is.push_back(idv[u + 8]); is.push_back(idv[u]); is.push_back(idv[v]);
+				}
+			}
+
+			
+		}
+	}
+
+
+}

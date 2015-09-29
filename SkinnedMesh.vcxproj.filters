@@ -19,6 +19,12 @@
     <Filter Include="FX">
       <UniqueIdentifier>{ef6a8d48-cbca-4c00-a337-4350c283e0ed}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SDF">
+      <UniqueIdentifier>{39cb0f83-877b-47ee-a5d8-b838996f31e8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MeshLoader">
+      <UniqueIdentifier>{cff07476-ea3b-4a89-995d-5b98d30e2295}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Effects.cpp">
@@ -90,14 +96,32 @@
     <ClCompile Include="Common\xnacollision.cpp">
       <Filter>Common</Filter>
     </ClCompile>
-    <ClCompile Include="SDF\AsyncWork.cpp">
-      <Filter>Header Files</Filter>
-    </ClCompile>
     <ClCompile Include="SDF.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="SDFShadow.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SSR.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SDF\AsyncWork.cpp">
+      <Filter>SDF</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLoader\baseDefine.cpp">
+      <Filter>MeshLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLoader\Mesh.cpp">
+      <Filter>MeshLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLoader\ModelFileParse.cpp">
+      <Filter>MeshLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLoader\submesh.cpp">
+      <Filter>MeshLoader</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshLoader\TGALoader.cpp">
+      <Filter>MeshLoader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -170,62 +194,83 @@
     <ClInclude Include="Common\xnacollision.h">
       <Filter>Common</Filter>
     </ClInclude>
-    <ClInclude Include="SDF\AsyncWork.h">
+    <ClInclude Include="SDFShadow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SDF\Box.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\BoxSphereBounds.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Config.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Float16.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Float32.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\GraphicMath.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\IntVector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\kDop.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\MathUtil.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Matrix.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\MeshUtilities.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\RandomStream.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Sphere.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\sse.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF\Vector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="SDF.h">
+    <ClInclude Include="SSR.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SDF\AlignedAllocator.h">
-      <Filter>Header Files</Filter>
+      <Filter>SDF</Filter>
     </ClInclude>
-    <ClInclude Include="SDFShadow.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="SDF\AsyncWork.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Box.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\BoxSphereBounds.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Config.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Float16.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Float32.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\GraphicMath.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\IntVector.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\kDop.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\sse.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Sphere.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Vector.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\MathUtil.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Matrix.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\MeshUtilities.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\RandomStream.h">
+      <Filter>SDF</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLoader\baseDefine.h">
+      <Filter>MeshLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLoader\Mesh.h">
+      <Filter>MeshLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLoader\ModelFileParse.h">
+      <Filter>MeshLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLoader\submesh.h">
+      <Filter>MeshLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="MeshLoader\TGALoader.h">
+      <Filter>MeshLoader</Filter>
+    </ClInclude>
+    <ClInclude Include="SDF\Material.h">
+      <Filter>SDF</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -273,5 +318,10 @@
     <CustomBuild Include="FX\SDFshadow.fx">
       <Filter>FX</Filter>
     </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="FX\SDFVolumeCulling.fx">
+      <Filter>FX</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

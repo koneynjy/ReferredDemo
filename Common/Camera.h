@@ -68,7 +68,7 @@ public:
 
 	// After modifying camera position/orientation, call to rebuild the view matrix.
 	void UpdateViewMatrix();
-
+	void UpdateCorner();
 private:
 
 	// Camera coordinate system with coordinates relative to world space.
@@ -76,6 +76,7 @@ private:
 	XMFLOAT3 mRight;
 	XMFLOAT3 mUp;
 	XMFLOAT3 mLook;
+	XMFLOAT3 mCorner[8];
 
 	// Cache frustum properties.
 	float mNearZ;

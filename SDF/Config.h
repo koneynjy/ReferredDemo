@@ -113,6 +113,7 @@ enum ENoInit { NoInit };
 #define PLATFORM_WINDOWS
 
 struct FVector;
+struct FVector2D;
 struct FIntVector;
 struct FMatrix;
 struct FVector4;
@@ -122,8 +123,11 @@ struct FBoxSphereBounds;
 struct FFloat16;
 struct FFloat32;
 struct MeshData;
+struct FMaterial;
+struct FTexture;
 class  FDistanceFieldVolumeData;
 
+#define _SDFALPHATEST
 
 #ifdef _HALF
 typedef FFloat16 SDFFloat;

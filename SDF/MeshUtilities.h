@@ -8,12 +8,24 @@
 #include "GraphicMath.h"
 #include "BoxSphereBounds.h"
 #include "AsyncWork.h"
+#include "Material.h"
 
 struct MeshData
 {
+	struct Triangle
+	{
+		unsigned indices[3];
+		unsigned material;
+	};
 	std::vector<FVector> Vertices;
-	std::vector<unsigned> Indices;
+	std::vector<FVector2D> UVs;
+	std::vector<Triangle> Indices;
+	std::vector<FMaterial> Mats;
 };
+typedef std::vector<FVector> MeshVerts;
+typedef std::vector<FVector2D> MeshUVs;
+typedef std::vector<MeshData::Triangle> MeshTries;
+typedef std::vector<FMaterial> MeshMats;
 
 
 class FDistanceFieldVolumeData
@@ -136,7 +148,8 @@ public:
 		FIntVector InVolumeDimensions,
 		float InVolumeMaxDistance,
 		int32 InZIndex,
-		TArray<SDFFloat>* DistanceFieldVolume)
+		TArray<SDFFloat>* DistanceFieldVolume,
+		MeshMats* mats)
 		:
 		kDopTree(InkDopTree),
 		SampleDirections(InSampleDirections),
@@ -145,7 +158,8 @@ public:
 		VolumeMaxDistance(InVolumeMaxDistance),
 		ZIndex(InZIndex),
 		OutDistanceFieldVolume(DistanceFieldVolume),
-		bNegativeAtBorder(false)
+		bNegativeAtBorder(false),
+		materials(mats)
 	{}
 
 	void DoWork();
@@ -167,6 +181,7 @@ private:
 	// Output
 	//TArray<FFloat16>* OutDistanceFieldVolume;
 	TArray<SDFFloat>* OutDistanceFieldVolume;
+	MeshMats * materials;
 };
 
 
@@ -210,7 +225,8 @@ void FMeshDistanceFieldAsyncTask::DoWork()
 						VoxelPosition + RayDirection * VolumeMaxDistance,
 						true,
 						kDOPDataProvider,
-						&Result);
+						&Result, 
+						*materials);
 
 					bool bHit = kDopTree->LineCheck(kDOPCheck);
 
@@ -284,7 +300,7 @@ void GenerateBoxSphereBounds(FBoxSphereBounds* bounds, const MeshData* LODModel)
 }
 
 void GenerateSignedDistanceFieldVolumeData(
-	const MeshData& LODModel
+	MeshData& LODModel
 	//,const TArray<EBlendMode>& MaterialBlendModes
 	, const FBoxSphereBounds& Bounds
 	, float DistanceFieldResolutionScale
@@ -295,7 +311,9 @@ void GenerateSignedDistanceFieldVolumeData(
 	{
 		FQueuedThreadPool ThreadPool;
 		const TArray<FVector>& PositionVertexBuffer = LODModel.Vertices;
-		const TArray<uint32>& Indices = LODModel.Indices;
+		const TArray<FMaterial>& mats = LODModel.Mats;
+		const TArray<FVector2D>& uvs = LODModel.UVs;
+		const MeshTries & Tries = LODModel.Indices;
 		TArray<FkDOPBuildCollisionTriangle<uint32> > BuildTriangles;
 
 		FVector BoundsSize = Bounds.GetBox().GetExtent() * 2;
@@ -307,11 +325,11 @@ void GenerateSignedDistanceFieldVolumeData(
 			&& Bounds.Origin.Z - Bounds.BoxExtent.Z < KINDA_SMALL_NUMBER
 			&& Bounds.Origin.Z + Bounds.BoxExtent.Z > -KINDA_SMALL_NUMBER;
 
-		for (uint32 i = 0; i < Indices.size(); i += 3)
+		for (uint32 i = 0; i < Tries.size(); i ++)
 		{
-			FVector V0 = PositionVertexBuffer[Indices[i + 2]];
-			FVector V1 = PositionVertexBuffer[Indices[i + 1]];
-			FVector V2 = PositionVertexBuffer[Indices[i + 0]];
+			FVector V0 = PositionVertexBuffer[Tries[i].indices[2]];
+			FVector V1 = PositionVertexBuffer[Tries[i].indices[1]];
+			FVector V2 = PositionVertexBuffer[Tries[i].indices[0]];
 
 			if (bMeshWasPlane)
 			{
@@ -343,13 +361,27 @@ void GenerateSignedDistanceFieldVolumeData(
 				// 					}
 				// 				}
 
-				if (bTriangleIsOpaqueOrMasked)
+				if (mats[Tries[i].material].alphaTest)
 				{
 					BuildTriangles.push_back(FkDOPBuildCollisionTriangle<uint32>(
-						bGenerateAsIfTwoSided,
+						Tries[i].material,
 						V0,
 						V1,
-						V2));
+						V2,
+						uvs[Tries[i].indices[0]],
+						uvs[Tries[i].indices[1]],
+						uvs[Tries[i].indices[2]]));
+				}
+				else
+				{
+					BuildTriangles.push_back(FkDOPBuildCollisionTriangle<uint32>(
+						Tries[i].material,
+						V0,
+						V1,
+						V2,
+						FVector2D(0, 0),
+						FVector2D(0, 0),
+						FVector2D(0, 0)));
 				}
 			}
 			
@@ -418,7 +450,8 @@ void GenerateSignedDistanceFieldVolumeData(
 					VolumeDimensions,
 					DistanceFieldVolumeMaxDistance,
 					ZIndex,
-					&OutData.DistanceFieldVolume);
+					&OutData.DistanceFieldVolume,
+					&LODModel.Mats);
 
 				ThreadPool.AddWork(Task);
 				//Task->StartBackgroundTask(&ThreadPool);

@@ -3,6 +3,8 @@
 texture3D gSDF0;
 texture2D gDepthMap;
 texture2D gGBuffer0;
+texture2D gFrontDepthMap;
+texture2D gBackDepthMap;
 
 cbuffer cbPerFrame
 {
@@ -44,6 +46,8 @@ bool inBounds(float3 start, float3 bounds)
 		start.x <= bounds.x + 0.00001  &  start.y <= bounds.y + 0.00001 & start.z <= bounds.z + 0.00001;
 }
 
+#define CULLING
+
 bool IntersectBounds(float3 start, float3 dir, float3 bounds,
 	out float3 i1, out int steps, out float length)
 {
@@ -83,8 +87,9 @@ bool IntersectBounds(float3 start, float3 dir, float3 bounds,
 			}
 		}
 	}
-
+#ifndef CULLING
 	if (mint >= 0){
+#endif
 		float t1 = 0, t2 = t[maxt];
 		i1 = start;
 		float3 i2 = pInsec[maxt];
@@ -95,7 +100,9 @@ bool IntersectBounds(float3 start, float3 dir, float3 bounds,
 		length = t2 - t1;
 		steps = (int)(length / 0.2f);
 		return true;
+#ifndef CULLING
 	}
+#endif
 
 	return false;
 }
@@ -111,9 +118,28 @@ VertexOut VS(VertexIn vin)
 	return vout;
 }
 
+float CalcShadowFactor(float f)
+{
+	return f - 0.1f;
+}
+
+#define TOTALSTEP 16
+
 float4 PS(VertexOut pin) : SV_Target
 {
-	float3 v = pin.viewDirW * gDepthMap.Sample(samLinear, pin.uv).r;
+
+#ifdef CULLING
+	float dback = gBackDepthMap.Sample(samLinear, pin.uv).r;
+	float dfront = gFrontDepthMap.Sample(samLinear, pin.uv).r;
+	bool bf = dfront >= 1.0f;
+	clip(dback >= 1.0f && bf ? -1 : 1);
+	dfront = bf ? 0.0f : dfront;
+#endif
+	float depth = gDepthMap.Sample(samLinear, pin.uv).r;
+#ifdef CULLING
+	clip(depth <= dback && depth >= dfront ? 1 : -1);
+#endif
+	float3 v = pin.viewDirW * depth;
 	//return v.zzzz / 50;
 	float3 posW = v + gEyePosW;//ReBuild World Position
 	float3 posSDF = mul(float4(posW, 1.0), gSDFToWordInv0).xyz;
@@ -127,42 +153,58 @@ float4 PS(VertexOut pin) : SV_Target
 	float4 shadow = float4(1.0f, 0, 0, 0);
 	float boundMax = max(gSDFBounds0.x, max(gSDFBounds0.y, gSDFBounds0.z)) * 0.5f;
 	float minstep;
+#ifdef CULLING
+	IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length);
+#else
 	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, steps, length))
 	{
+#endif
 		//return float4(0.0f,0,0,0);
 		float3 start = i1;
 		float3 scale = float3(1.0f,1.0f,1.0f) / gSDFBounds0;
 		float step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
-		minstep = step;
-		float smallstep = length / 10;
-		if (step <= 0.01f) return shadow;
+		float smallstep = length / TOTALSTEP;
+		if (step <= 0.01f)
+		{
+			return shadow;
+		}
 		if (step < smallstep) step = smallstep;
 		start += step * dir;
 		len += step;
-		for (int i = 0; i < 10; ++i)
+		minstep = step * TOTALSTEP / len;
+		for (int i = 0; i < TOTALSTEP; ++i)
 		{
 			if (len >= length) break;
 			//float3 uvw = start * scale;
-			step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
-			minstep = min(minstep, step);
-			if (step <= 0.0f){
+			step = gSDF0.Sample(samLinear, start * scale).r;
+			if (step <= 0.5f / TOTALSTEP){
 				shadow.r = 0.0f;
 				break;
 			}
+			step *= boundMax;
+			minstep = min(minstep, step * TOTALSTEP / len);
+			
 			if (step < smallstep) step = smallstep;
 			//step *= 1.25f;
 			len += step;
 			start += step * dir;
-			if (len > length) break;
 		}
+#ifndef	CULLING
 	}
+#endif
+	//else
+	//{
+	//	shadow.r = 0.5f;
+	//	return shadow;
+	//}
 	//shadow = (abs(gSDF0.Sample(samLinear, float3(0.5f, 0.5f, 0.5f)).r) / 3.0f).rrrr;
-	if (minstep < 0.1f)	 {
-		shadow.r = 0.0f;
-		return shadow;
-	}
-	if (minstep < 1.0f)
-		return shadow * minstep;
+	//if (minstep < 0.1f)	 {
+	//	shadow.r = 0.0f;
+	//	return shadow;
+	//}
+	
+	//if (minstep < 0.5f)
+		//return shadow * minstep * 2;
 	return shadow;
 }
 

@@ -4,6 +4,7 @@
 #include "SDF/Config.h"
 #include "GeometryGenerator.h"
 #include "Vertex.h"
+#include "MeshLoader/Mesh.h"
 struct SDFModel
 {
 public:
@@ -12,6 +13,7 @@ public:
 	FBoxSphereBounds *boxSphereBounds;
 	SDFModel(){};
 	SDFModel(GeometryGenerator::MeshData &md);
+	SDFModel(CMesh& cmesh);
 	SDFModel(std::vector<Vertex::Basic32>& vert, std::vector<UINT> &ind);
 	void GenerateSDF(
 		float DistanceFieldResolutionScale, 
@@ -19,7 +21,9 @@ public:
 		);
 
 	void GetSDFData(SDFFloat*& data, uint32&w, uint32&h, uint32&d);
+	XMFLOAT3 GetOrigin();
 	XMFLOAT3 GetBounds();
+	XMFLOAT3 GetExtend();
 	float GetRes();
 	static SDFModel Merge(SDFModel& m0, FVector& Pos0, SDFModel& m1, FVector& Pos1);
 	~SDFModel();

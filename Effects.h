@@ -10,6 +10,8 @@
 
 #include "d3dUtil.h"
 
+#define SSR_EFFECT 0x01
+
 #pragma region Effect
 class Effect
 {
@@ -389,6 +391,7 @@ public:
 
 	ID3DX11EffectTechnique* SsaoTech;
 	ID3DX11EffectTechnique* SsaoDeferred;
+	ID3DX11EffectTechnique* SsvoDeferred;
 
 	ID3DX11EffectMatrixVariable* ViewRot;
 	ID3DX11EffectMatrixVariable* ViewToTexSpace;
@@ -518,6 +521,7 @@ public:
 	void SetGBuffer0(ID3D11ShaderResourceView* tex)		{ GBuffer0->SetResource(tex); }
 	void SetGBuffer1(ID3D11ShaderResourceView* tex)		{ GBuffer1->SetResource(tex); }
 	void SetSDFShadow(ID3D11ShaderResourceView* tex)	{ SDFShadow->SetResource(tex); }
+	void SetSSRMap(ID3D11ShaderResourceView* tex)		{ SSRMap->SetResource(tex); }
 
 	ID3DX11EffectTechnique* DeferredShadingTech;
 
@@ -533,6 +537,7 @@ public:
 	ID3DX11EffectShaderResourceVariable* GBuffer0;
 	ID3DX11EffectShaderResourceVariable* GBuffer1;
 	ID3DX11EffectShaderResourceVariable* SDFShadow;
+	ID3DX11EffectShaderResourceVariable* SSRMap;
 };
 
 #pragma endregion
@@ -557,6 +562,8 @@ public :
 	void SetGBuffer0(ID3D11ShaderResourceView* tex)     { GBuffer0->SetResource(tex); }
 	void SetSDF0(ID3D11ShaderResourceView* tex)         { SDF0->SetResource(tex); }
 	void SetDepthMap(ID3D11ShaderResourceView* tex)     { DepthMap->SetResource(tex); }
+	void SetFrontDepthMap(ID3D11ShaderResourceView* tex){ FrontDepthMap->SetResource(tex); }
+	void SetBackDepthMap(ID3D11ShaderResourceView* tex) { BackDepthMap->SetResource(tex); }
 
 	ID3DX11EffectTechnique* SDFShadowTech;
 
@@ -571,6 +578,43 @@ public :
 	ID3DX11EffectShaderResourceVariable* DepthMap;
 	ID3DX11EffectShaderResourceVariable* GBuffer0;
 	ID3DX11EffectShaderResourceVariable* SDF0;
+	ID3DX11EffectShaderResourceVariable* FrontDepthMap;
+	ID3DX11EffectShaderResourceVariable* BackDepthMap;
+};
+
+#pragma endregion
+
+#pragma  region SSREffect
+
+class SSREffect	:public Effect
+{
+public:
+	SSREffect(ID3D11Device* device, const std::wstring& filename);
+	~SSREffect();
+
+	void SetViewRot(CXMMATRIX M)						{ ViewRot->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetViewInv(CXMMATRIX M)						{ ViewInv->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetViewToTex(CXMMATRIX M)						{ ViewToTex->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetFarClipDist(float f)						{ FarClipDist->SetFloat(f); }
+
+	void SetGBuffer0(ID3D11ShaderResourceView* tex)     { GBuffer0->SetResource(tex); }
+	void SetDepthMap(ID3D11ShaderResourceView* tex)     { DepthMap->SetResource(tex); }
+	void SetFrameBuffer(ID3D11ShaderResourceView* tex)  { FrameBuffer->SetResource(tex); }
+	void SetCubeMap(ID3D11ShaderResourceView* tex)		{ CubeMap->SetResource(tex); }
+	void SetStencilMap(ID3D11ShaderResourceView* tex)	{ StencilMap->SetResource(tex); }
+
+	ID3DX11EffectTechnique* SSRTech;
+
+	ID3DX11EffectMatrixVariable* ViewRot;
+	ID3DX11EffectMatrixVariable* ViewInv;
+	ID3DX11EffectMatrixVariable* ViewToTex;
+	ID3DX11EffectScalarVariable* FarClipDist;
+
+	ID3DX11EffectShaderResourceVariable* DepthMap;
+	ID3DX11EffectShaderResourceVariable* GBuffer0;
+	ID3DX11EffectShaderResourceVariable* FrameBuffer;
+	ID3DX11EffectShaderResourceVariable* CubeMap;
+	ID3DX11EffectShaderResourceVariable* StencilMap;
 };
 
 #pragma endregion
@@ -602,6 +646,25 @@ public:
 };
 #pragma endregion
 
+#pragma region SDFVolumeCulling
+
+class SDFVolumeCullingEffect : public Effect
+{
+public:
+	SDFVolumeCullingEffect(ID3D11Device* device, const std::wstring& filename);
+	~SDFVolumeCullingEffect();
+
+	void SetViewProj(CXMMATRIX M)						{ ViewProj->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetFarClipDist(const float f)                      { FarClipDist->SetFloat(f); }
+
+	ID3DX11EffectTechnique* SDFVolumeDepthTech;
+
+	ID3DX11EffectMatrixVariable* ViewProj;
+	ID3DX11EffectScalarVariable* FarClipDist;
+};
+
+#pragma  endregion
+
 #pragma region Effects
 class Effects
 {
@@ -620,6 +683,8 @@ public:
 	static GBufferEffect* GBufferFX;
 	static DeferredShadingEffect* DeferredShadingFX;
 	static SDFShadowEffect* SDFShadowFX;
+	static SSREffect* SSRFX;
+	static SDFVolumeCullingEffect* SDFVolumeCullingFX;
 };
 #pragma endregion
 

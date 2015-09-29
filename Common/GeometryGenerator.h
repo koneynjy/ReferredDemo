@@ -84,6 +84,9 @@ public:
 
 	void CreateFarPlaneQuad(MeshData& meshData, Camera &camera);
 
+	void CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is , Camera &camera, 
+		XMVECTOR boxVert[], XMFLOAT3 lightDir);
+
 private:
 	void Subdivide(MeshData& meshData);
 	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount, MeshData& meshData);

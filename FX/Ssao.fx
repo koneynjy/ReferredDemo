@@ -14,9 +14,14 @@ cbuffer cbPerFrame
 
 	// Coordinates given in view space.
 	float    gOcclusionRadius    = 0.5f;
+	float    gSSVORadius		 = 0.5f;
+	float    gSSVORo			 = 0.5f;
 	float    gOcclusionFadeStart = 0.2f;
 	float    gOcclusionFadeEnd   = 2.0f;
 	float    gSurfaceEpsilon     = 0.05f;
+
+	float    samplex[4] = {0.5f, -0.5f, -0.5f, 0.5f};
+	float    sampley[4] = {0.5f, 0.5f, -0.5f, -0.5f };
 };
  
 // Nonnumeric values cannot be added to a cbuffer.
@@ -35,6 +40,16 @@ SamplerState samNormalDepth
 	AddressU = BORDER;
 	AddressV = BORDER;
 	BorderColor = float4(0.0f, 0.0f, 0.0f, 1e5f);
+};
+
+SamplerState samVODepth
+{
+	Filter = MIN_MAG_LINEAR_MIP_POINT;
+
+	// Set a very far depth value if sampling outside of the NormalDepth map
+	// so we do not get false occlusions.
+	AddressU = CLAMP;
+	AddressV = CLAMP;
 };
 
 SamplerState samRandomVec
@@ -196,7 +211,7 @@ void PS(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target)
 		//     from p, then it does not occlude it.
 		// 
 		
-		float distZ = p.z - r.z;
+		float distZ = rz - p.z;
 		float dp = max(dot(n, normalize(r - p)), 0.0f);
 		float occlusion = dp * OcclusionFunction(distZ);
 		
@@ -205,11 +220,12 @@ void PS(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target)
 	
 	occlusionSum /= gSampleCount;
 	
-	float access = 1.0f - occlusionSum;
+	float access = occlusionSum;
 
 	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
 	c = saturate(pow(access, 4.0f));
 }
+
 
 void PSDeferred(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target) 
 {
@@ -293,6 +309,77 @@ void PSDeferred(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Targe
 	c =  saturate(pow(access, 4.0f));
 }
 
+float OcclusionFunction(float dr, float zs)
+{
+	return max(min(zs, dr) + zs, 0) / zs * 0.5f;
+}
+
+
+void PSSSVO(VertexOut pin, uniform int gSampleCount, out float4 c : SV_Target)
+{
+	// p -- the point we are computing the ambient occlusion for.
+	// n -- normal vector at p.
+	// q -- a random offset from p.
+	// r -- a potential occluder that might occlude p.
+
+	// Get viewspace normal and z-coord of this pixel.  The tex-coords for
+	// the fullscreen quad we drew are already in uv-space.
+	float4 g0 = gGBuffer0.SampleLevel(samNormalDepth, pin.Tex, 0.0f);
+	float3 n = mul(GetNormal(g0).xyz, (float3x3) gViewRot);
+	float pzNorm = gDepthMap.SampleLevel(samNormalDepth, pin.Tex, 0.0f).r;
+	//
+	// Reconstruct full view space posotion (x,y,z).
+	// Find t such that p = t*pin.ToFarPlane.
+	// p.z = t*pin.ToFarPlane.z
+	// t = p.z / pin.ToFarPlane.z
+	//
+	float3 p = pzNorm * pin.ToFarPlane;
+	float far = gFrustumCorners[0].z;
+	// Extract random vector and map from [0,1] --> [-1, +1].
+	float3 randVec = 2.0f*gRandomVecMap.SampleLevel(samRandomVec, 4.0f*pin.Tex, 0.0f).rgb - 1.0f;
+
+	float occlusionSum = 0.0f;
+
+	// Sample neighboring points about p in the hemisphere oriented by n.
+	float div = 0;
+	[unroll]
+	for (int i = 0; i < gSampleCount; ++i)
+	{
+		// Are offset vectors are fixed and uniformly distributed (so that our offset vectors
+		// do not clump in the same direction).  If we reflect them about a random vector
+		// then we get a random uniform distribution of offset vectors.
+		float3 offset = reflect(gOffsetVectors[i].xyz, randVec);
+
+		// Flip offset vector if it is behind the plane defined by (p, n).
+		//float flip = sign(dot(offset, n));
+
+		// Sample a point near p within the occlusion radius.
+		float3 q = p +  gOcclusionRadius * offset;
+		//float3 q = p + float3(samplex[i], sampley[i], 0);
+
+		// Project q and generate projective tex-coords.  
+		float4 projQ = mul(float4(q, 1.0f), gViewToTexSpace);
+		projQ /= projQ.w;
+
+		float rz = gDepthMap.SampleLevel(samVODepth, projQ.xy, 0.0f).r * far;
+
+		float distZ =  rz - p.z;
+		float zs = gOcclusionRadius * sqrt(1 - offset.x * offset.x - offset.y * offset.y);
+		float occlusion = OcclusionFunction(distZ, zs) * zs ;
+		div += zs;
+		occlusionSum += occlusion;
+	}
+
+	occlusionSum /= div;
+	float access = occlusionSum;
+
+	// Sharpen the contrast of the SSAO map to make the SSAO affect more dramatic.
+	//if (access >1.0f) access = 1.0f;
+	//else access = 1.0f;
+	c = saturate(pow(access, 1.0));
+	//c = access;
+}
+
 technique11 Ssao
 {
     pass P0
@@ -310,6 +397,16 @@ technique11 SsaoDeferred
 		SetVertexShader(CompileShader(vs_5_0, VSDeferred()));
 		SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_5_0, PSDeferred(14)));
+	}
+}
+
+technique11 SsvoDeferred
+{
+	pass P0
+	{
+		SetVertexShader(CompileShader(vs_5_0, VSDeferred()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PSSSVO(6)));
 	}
 }
  

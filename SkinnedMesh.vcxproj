@@ -70,15 +70,15 @@
     <LinkIncremental>true</LinkIncremental>
     <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\Tools\bin;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\ide;$(ProgramFiles)\HTML Help Workshop;$(MSBuildToolsPath32);$(VSInstallDir);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
     <IncludePath>$(DXSDK_DIR)Include;..\..\Common;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
-    <LibraryPath>$(DXSDK_DIR)Lib\x86;$(LibraryPath);</LibraryPath>
+    <LibraryPath>$(DXSDK_DIR)Lib\x86;$(LibraryPath);Lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(DXSDK_DIR)\Include;Common;$(IncludePath);</IncludePath>
-    <LibraryPath>$(DXSDK_DIR)\Lib\x86;$(LibraryPath);</LibraryPath>
+    <IncludePath>$(DXSDK_DIR)\Include;Common;XML;$(IncludePath);</IncludePath>
+    <LibraryPath>$(DXSDK_DIR)\Lib\x86;Lib;$(LibraryPath);</LibraryPath>
     <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\Tools\bin;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\ide;$(ProgramFiles)\HTML Help Workshop;$(MSBuildToolsPath32);$(VSInstallDir);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -94,12 +94,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>Common</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>Common;XML</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;D3DCompiler.lib;Effects11d.lib;dxerr.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11d.lib;D3DCompiler.lib;Effects11d.lib;dxerr.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies);tinyxml_d.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -133,7 +133,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>d3d11.lib;d3dx11.lib;D3DCompiler.lib;Effects11.lib;dxerr.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>d3d11.lib;d3dx11.lib;D3DCompiler.lib;Effects11.lib;dxerr.lib;dxgi.lib;dxguid.lib;%(AdditionalDependencies);tinyxml_d.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -171,6 +171,11 @@
     <ClCompile Include="Effects.cpp" />
     <ClCompile Include="LoadM3d.cpp" />
     <ClCompile Include="MeshGeometry.cpp" />
+    <ClCompile Include="MeshLoader\baseDefine.cpp" />
+    <ClCompile Include="MeshLoader\Mesh.cpp" />
+    <ClCompile Include="MeshLoader\ModelFileParse.cpp" />
+    <ClCompile Include="MeshLoader\submesh.cpp" />
+    <ClCompile Include="MeshLoader\TGALoader.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="SDF.cpp" />
     <ClCompile Include="SDFShadow.cpp" />
@@ -183,6 +188,7 @@
     </ClCompile>
     <ClCompile Include="Sky.cpp" />
     <ClCompile Include="Ssao.cpp" />
+    <ClCompile Include="SSR.cpp" />
     <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -202,6 +208,11 @@
     <ClInclude Include="Effects.h" />
     <ClInclude Include="LoadM3d.h" />
     <ClInclude Include="MeshGeometry.h" />
+    <ClInclude Include="MeshLoader\baseDefine.h" />
+    <ClInclude Include="MeshLoader\Mesh.h" />
+    <ClInclude Include="MeshLoader\ModelFileParse.h" />
+    <ClInclude Include="MeshLoader\submesh.h" />
+    <ClInclude Include="MeshLoader\TGALoader.h" />
     <ClInclude Include="RenderStates.h" />
     <ClInclude Include="SDF.h" />
     <ClInclude Include="SDFShadow.h" />
@@ -215,6 +226,7 @@
     <ClInclude Include="SDF\GraphicMath.h" />
     <ClInclude Include="SDF\IntVector.h" />
     <ClInclude Include="SDF\kDop.h" />
+    <ClInclude Include="SDF\Material.h" />
     <ClInclude Include="SDF\MathUtil.h" />
     <ClInclude Include="SDF\Matrix.h" />
     <ClInclude Include="SDF\MeshUtilities.h" />
@@ -227,6 +239,7 @@
     <ClInclude Include="SkinnedModel.h" />
     <ClInclude Include="Sky.h" />
     <ClInclude Include="Ssao.h" />
+    <ClInclude Include="SSR.h" />
     <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <ItemGroup>
@@ -385,6 +398,14 @@
       <FileType>Document</FileType>
       <Command Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">fxc /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">%(RelativeDir)\%(Filename).fxo</Outputs>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="FX\SDFVolumeCulling.fx">
+      <FileType>Document</FileType>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc /Fc /Od /Zi /T fx_5_0 /Fo "%(RelativeDir)\%(Filename).fxo" "%(FullPath)"</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">fxc compile for debug: %(FullPath)</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">%(RelativeDir)\%(Filename).fxo</Outputs>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

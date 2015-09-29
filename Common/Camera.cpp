@@ -248,3 +248,42 @@ void Camera::UpdateViewMatrix()
 }
 
 
+void Camera::UpdateCorner()
+{
+	// We have the camera's up and look, but we also need right.
+	XMVECTOR up = XMLoadFloat3(&mUp);
+	XMVECTOR look = XMLoadFloat3(&mLook);
+	XMVECTOR right = XMVector3Cross(up, look);
+	XMVECTOR position = XMLoadFloat3(&mPosition);
+	// Compute the position of the center of the near and far clip planes.
+	XMVECTOR nearCenter = position + look * mNearZ;
+	XMVECTOR farCenter = position + look * mFarZ;
+
+	// Compute the width and height of the near and far clip planes
+	float tanHalfFov = tanf(0.5f * mFovY);
+	float halfNearWidth = mNearZ * tanHalfFov;
+	float halfNearHeight = halfNearWidth / mAspect;
+
+	float halfFarWidth = mFarZ * tanHalfFov;
+	float halfFarHeight = halfFarWidth / mAspect;
+
+	// Create two vectors each for the near and far clip planes.
+	// These are the scaled up and right vectors.
+	XMVECTOR upNear = up    * halfNearHeight;
+	XMVECTOR rightNear = right * halfNearWidth;
+	XMVECTOR upFar = up    * halfFarHeight;
+	XMVECTOR rightFar = right * halfFarWidth;
+
+	// Use the center positions and the up and right vectors
+	// to compute the positions for the near and far clip plane vertices (four each)
+	XMStoreFloat3(&mCorner[0], nearCenter + upNear - rightNear); // near top left
+	XMStoreFloat3(&mCorner[1], nearCenter + upNear + rightNear); // near top right
+	XMStoreFloat3(&mCorner[2], nearCenter - upNear + rightNear); // near bottom right
+	XMStoreFloat3(&mCorner[3], nearCenter - upNear - rightNear); // near bottom left
+	XMStoreFloat3(&mCorner[4], farCenter + upFar - rightFar);  // far top left
+	XMStoreFloat3(&mCorner[5], farCenter + upFar + rightFar);  // far top right
+	XMStoreFloat3(&mCorner[6], farCenter - upFar + rightFar);  // far bottom right
+	XMStoreFloat3(&mCorner[7], farCenter - upFar - rightFar);  // far bottom left
+}
+
+

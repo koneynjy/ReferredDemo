@@ -109,7 +109,7 @@ void Ssao::ComputeSsao(const Camera& camera)
 		mDC->DrawIndexed(6, 0, 0);
     }
 }
-
+//#define  VO
 void Ssao::ComputeSsaoDeferred(
 	const Camera& camera,
 	ID3D11ShaderResourceView* depthMap,
@@ -150,8 +150,11 @@ void Ssao::ComputeSsaoDeferred(
 	mDC->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	mDC->IASetVertexBuffers(0, 1, &mScreenQuadVB, &stride, &offset);
 	mDC->IASetIndexBuffer(mScreenQuadIB, DXGI_FORMAT_R16_UINT, 0);
-
+#ifdef VO
+	ID3DX11EffectTechnique* tech = Effects::SsaoFX->SsvoDeferred;
+#else
 	ID3DX11EffectTechnique* tech = Effects::SsaoFX->SsaoDeferred;
+#endif
 	D3DX11_TECHNIQUE_DESC techDesc;
 
 	tech->GetDesc(&techDesc);

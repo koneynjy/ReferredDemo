@@ -315,6 +315,7 @@ SsaoEffect::SsaoEffect(ID3D11Device* device, const std::wstring& filename)
 {
 	SsaoTech           = mFX->GetTechniqueByName("Ssao");
 	SsaoDeferred	   = mFX->GetTechniqueByName("SsaoDeferred");
+	SsvoDeferred	   = mFX->GetTechniqueByName("SsvoDeferred");
 
 	ViewRot			   = mFX->GetVariableByName("gViewRot")->AsMatrix();
 	ViewToTexSpace     = mFX->GetVariableByName("gViewToTexSpace")->AsMatrix();
@@ -424,6 +425,7 @@ DeferredShadingEffect::DeferredShadingEffect(ID3D11Device* device, const std::ws
 	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 	GBuffer1				= mFX->GetVariableByName("gGBuffer1")->AsShaderResource();
 	SDFShadow				= mFX->GetVariableByName("gSDFShadow")->AsShaderResource();
+	SSRMap					= mFX->GetVariableByName("gSSRMap")->AsShaderResource();
 }
 
 DeferredShadingEffect::~DeferredShadingEffect(){}
@@ -448,9 +450,34 @@ SDFShadowEffect::SDFShadowEffect(ID3D11Device* device, const std::wstring& filen
 	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
 	SDF0					= mFX->GetVariableByName("gSDF0")->AsShaderResource();
+	FrontDepthMap			= mFX->GetVariableByName("gFrontDepthMap")->AsShaderResource();
+	BackDepthMap			= mFX->GetVariableByName("gBackDepthMap")->AsShaderResource();
 }
 
 SDFShadowEffect::~SDFShadowEffect(){};
+#pragma endregion
+
+#pragma region SSREffect
+
+SSREffect::SSREffect(ID3D11Device* device, const std::wstring& filename)
+	: Effect(device, filename)
+{
+	SSRTech					= mFX->GetTechniqueByName("SSRTech");
+
+	ViewRot					= mFX->GetVariableByName("gViewRot")->AsMatrix();
+	ViewInv					= mFX->GetVariableByName("gViewInv")->AsMatrix();
+	ViewToTex				= mFX->GetVariableByName("gViewToTex")->AsMatrix();
+	FarClipDist				= mFX->GetVariableByName("gFarClipDist")->AsScalar();
+
+	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
+	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
+	FrameBuffer				= mFX->GetVariableByName("gFrameBuffer")->AsShaderResource();
+	CubeMap					= mFX->GetVariableByName("gCubeMap")->AsShaderResource();
+	StencilMap				= mFX->GetVariableByName("gStencilMap")->AsShaderResource();
+}
+
+SSREffect::~SSREffect(){}
+
 #pragma endregion
 
 #pragma region DebugTexEffect
@@ -477,6 +504,23 @@ DebugTexEffect::~DebugTexEffect()
 
 #pragma endregion
 
+
+#pragma region SDFVolumeCulling
+
+SDFVolumeCullingEffect::SDFVolumeCullingEffect(ID3D11Device* device, const std::wstring& filename)
+: Effect(device, filename)
+{
+	SDFVolumeDepthTech	= mFX->GetTechniqueByName("SDFVolumeDepthTech");
+
+	ViewProj			= mFX->GetVariableByName("gViewProj")->AsMatrix();
+	FarClipDist			= mFX->GetVariableByName("gFarClipDist")->AsScalar();
+}
+
+SDFVolumeCullingEffect::~SDFVolumeCullingEffect(){}
+
+#pragma  endregion
+
+
 #pragma region Effects
 
 BasicEffect*           Effects::BasicFX           = 0;
@@ -490,6 +534,8 @@ DebugTexEffect*        Effects::DebugTexFX        = 0;
 GBufferEffect*		   Effects::GBufferFX         = 0;
 DeferredShadingEffect* Effects::DeferredShadingFX = 0;
 SDFShadowEffect*	   Effects::SDFShadowFX		  = 0;
+SSREffect*			   Effects::SSRFX			  = 0;
+SDFVolumeCullingEffect*Effects::SDFVolumeCullingFX= 0;
 
 void Effects::InitAll(ID3D11Device* device)
 {
@@ -504,6 +550,8 @@ void Effects::InitAll(ID3D11Device* device)
 	GBufferFX         = new GBufferEffect(device, L"FX/GBuffer.fxo");
 	DeferredShadingFX = new DeferredShadingEffect(device, L"FX/DeferredShading.fxo");
 	SDFShadowFX		  = new SDFShadowEffect(device, L"FX/SDFshadow.fxo");
+	SSRFX			  = new SSREffect(device, L"FX/SSR.fxo");
+	SDFVolumeCullingFX= new SDFVolumeCullingEffect(device, L"FX/SDFVolumeCulling.fxo");
 }
 
 void Effects::DestroyAll()
@@ -518,6 +566,8 @@ void Effects::DestroyAll()
 	SafeDelete(DebugTexFX);
 	SafeDelete(GBufferFX);
 	SafeDelete(SDFShadowFX);
+	SafeDelete(SSRFX);
+	SafeDelete(SDFVolumeCullingFX);
 }
 
 #pragma endregion
