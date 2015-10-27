@@ -20,6 +20,9 @@ CTGALoader::~CTGALoader()
 /** 载入TGA文件 */
 bool CTGALoader::LoadTGA(const string& filename)
 {
+	if (filename.length() < 5) return false;
+	string format = filename.substr(filename.length() - 4, 4);
+	if (format != ".tga" && format != ".TGA") return false;
 	FILE *pfile;
 
 	/** 打开文件 */

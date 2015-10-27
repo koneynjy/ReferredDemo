@@ -123,7 +123,7 @@ float CalcShadowFactor(float f)
 	return f - 0.1f;
 }
 
-#define TOTALSTEP 16
+#define TOTALSTEP 128
 
 float4 PS(VertexOut pin) : SV_Target
 {
@@ -164,20 +164,21 @@ float4 PS(VertexOut pin) : SV_Target
 		float3 scale = float3(1.0f,1.0f,1.0f) / gSDFBounds0;
 		float step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
 		float smallstep = length / TOTALSTEP;
-		if (step <= 0.01f)
-		{
-			return shadow;
-		}
-		if (step < smallstep) step = smallstep;
-		start += step * dir;
-		len += step;
-		minstep = step * TOTALSTEP / len;
-		for (int i = 0; i < TOTALSTEP; ++i)
+		//if (step < 0.00f)
+		//{
+		//	return shadow;
+		//}
+		//if (step < smallstep) step = smallstep;
+		float ori = 0.01f * boundMax;
+		start += ori * dir;
+		len += ori;
+		minstep = ori * TOTALSTEP / len;
+		for (int i = 0; i <= TOTALSTEP; ++i)
 		{
 			if (len >= length) break;
 			//float3 uvw = start * scale;
 			step = gSDF0.Sample(samLinear, start * scale).r;
-			if (step <= 0.5f / TOTALSTEP){
+			if (step <= 0){
 				shadow.r = 0.0f;
 				break;
 			}
@@ -203,8 +204,8 @@ float4 PS(VertexOut pin) : SV_Target
 	//	return shadow;
 	//}
 	
-	//if (minstep < 0.5f)
-		//return shadow * minstep * 2;
+	if (minstep < 1.0f)
+		return shadow * minstep;
 	return shadow;
 }
 

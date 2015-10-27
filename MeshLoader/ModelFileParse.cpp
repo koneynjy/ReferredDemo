@@ -585,7 +585,8 @@ void CMesh::parse_material(TiXmlElement* material_element, int index)
 			if (float_value)
 			{
 				std::string alphaTest = float_value->GetText();
-				sub_mesh.m_alphaTest = alphaTest == "true";
+				if (sub_mesh.m_diffuse.image != 0)
+					sub_mesh.m_alphaTest = alphaTest == "true";
 			}
 		}
 		else if (TWOSIDED == text)

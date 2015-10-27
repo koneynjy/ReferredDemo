@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -22,6 +22,7 @@
     <ProjectGuid>{93BE533A-C8AD-4CFD-9C1B-B8C7055503AB}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>SkinnedMesh</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -34,7 +35,7 @@
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -48,7 +49,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -169,6 +170,7 @@
     <ClCompile Include="Common\xnacollision.cpp" />
     <ClCompile Include="DeferredShading.cpp" />
     <ClCompile Include="Effects.cpp" />
+    <ClCompile Include="GPUTime.cpp" />
     <ClCompile Include="LoadM3d.cpp" />
     <ClCompile Include="MeshGeometry.cpp" />
     <ClCompile Include="MeshLoader\baseDefine.cpp" />
@@ -176,6 +178,7 @@
     <ClCompile Include="MeshLoader\ModelFileParse.cpp" />
     <ClCompile Include="MeshLoader\submesh.cpp" />
     <ClCompile Include="MeshLoader\TGALoader.cpp" />
+    <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="SDF.cpp" />
     <ClCompile Include="SDFShadow.cpp" />
@@ -206,7 +209,9 @@
     <ClInclude Include="Common\xnacollision.h" />
     <ClInclude Include="DeferredShading.h" />
     <ClInclude Include="Effects.h" />
+    <ClInclude Include="GPUTime.h" />
     <ClInclude Include="LoadM3d.h" />
+    <ClInclude Include="LoadOBJ.h" />
     <ClInclude Include="MeshGeometry.h" />
     <ClInclude Include="MeshLoader\baseDefine.h" />
     <ClInclude Include="MeshLoader\Mesh.h" />

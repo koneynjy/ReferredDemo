@@ -86,7 +86,7 @@ float4 PS(VertexOut pin) : SV_Target
 
 		// Only the first light casts a shadow.
 	float3 shadow = float3(1.0f, 1.0f, 1.0f);
-	shadow[0] = CalcShadowFactor(samShadow, gShadowMap, shadowPosH);
+	//shadow[0] = CalcShadowFactor(samShadow, gShadowMap, shadowPosH);
 	shadow[1] = gSDFShadow.Sample(samLinear, pin.uv).r;
 	float ambientAccess = gSsaoMap.SampleLevel(samLinear, pin.uv, 0.0f).r;
 

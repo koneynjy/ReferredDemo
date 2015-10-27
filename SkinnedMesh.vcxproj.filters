@@ -123,6 +123,12 @@
     <ClCompile Include="MeshLoader\TGALoader.cpp">
       <Filter>MeshLoader</Filter>
     </ClCompile>
+    <ClCompile Include="GPUTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OBJLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Effects.h">
@@ -272,6 +278,12 @@
     <ClInclude Include="SDF\Material.h">
       <Filter>SDF</Filter>
     </ClInclude>
+    <ClInclude Include="GPUTime.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="LoadOBJ.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="FX\LightHelper.fx">
@@ -318,10 +330,6 @@
     <CustomBuild Include="FX\SDFshadow.fx">
       <Filter>FX</Filter>
     </CustomBuild>
-  </ItemGroup>
-  <ItemGroup>
-    <FxCompile Include="FX\SDFVolumeCulling.fx">
-      <Filter>FX</Filter>
-    </FxCompile>
+    <CustomBuild Include="FX\SDFVolumeCulling.fx" />
   </ItemGroup>
 </Project>

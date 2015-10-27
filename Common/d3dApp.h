@@ -58,7 +58,7 @@ protected:
 	UINT      m4xMsaaQuality;
 
 	GameTimer mTimer;
-
+	double sdfTime;
 	ID3D11Device* md3dDevice;
 	ID3D11DeviceContext* md3dImmediateContext;
 	IDXGISwapChain* mSwapChain;

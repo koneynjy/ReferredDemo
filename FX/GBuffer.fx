@@ -221,6 +221,6 @@ technique11 GBufferTechBaseReflect
 	{
 		SetVertexShader(CompileShader(vs_5_0, VSBase()));
 		SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_5_0, PSBase(true)));
+		SetPixelShader(CompileShader(ps_5_0, PSBase(false)));
 	}
 }

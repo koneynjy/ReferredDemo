@@ -29,7 +29,7 @@
 #include "SDF.h"
 #include "SDFShadow.h"
 #include "SSR.h"
-#pragma optimize("", off)
+//#pragma optimize("", off)
 //#define DEBUGTEX
 #define TESTMODEL
 #define SDF_ENABLE
@@ -216,7 +216,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	XMStoreFloat4x4(&mBoxWorld, XMMatrixMultiply(boxScale, boxOffset));
 
 	XMMATRIX skullScale = XMMatrixScaling(1, 1, 1);
-	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
+	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, -124.0f, 0.0f);
 	XMStoreFloat4x4(&mSkullWorld, XMMatrixMultiply(skullScale, skullOffset));
 	//XMStoreFloat4x4(&mSkullWorld, XMMatrixIdentity());
 	for(int i = 0; i < 5; ++i)
@@ -1417,6 +1417,8 @@ void SkinnedMeshApp::DeferredShadingPass()
 	
 	BuildGBuffer();
 	//SSRPass();
+	__int64 startTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
 #ifdef SDF_ENABLE
 	
 	//SDFShadowPass(sphereModel, mSphereSDFSRV, mSphereWorld[3]);
@@ -1426,7 +1428,10 @@ void SkinnedMeshApp::DeferredShadingPass()
 #else
 	SDFShadowPass(skullModel, mSkullSDFSRV, mSkullWorld);
 #endif // TESTMODEL
+	__int64 endTime;
+	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
 
+	sdfTime = (endTime - startTime)*mTimer.mSecondsPerCount * 1000;
 	
 	//SDFShadowPass(cylinderModel, mCylinderSDFSRV, mCylWorld[3]);
 
@@ -1988,7 +1993,8 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 void SkinnedMeshApp::BuildTestModelSDF()
 {
 	CMesh cmesh;
-	cmesh.Init("D:/scene/common/zw/zwshu/slj_zwshu0020_wb.model", "D:/", XMFLOAT3(0, 0, 0));
+	cmesh.Init("D:/lod/proxy/000e000co.model", "D:/", XMFLOAT3(0, 0, 0));
+	//cmesh.Init("D:/scene/common/zw/zwshu/slj_zwshu0020_wb.model", "D:/", XMFLOAT3(0, 0, 0));
 	////////////////////////////////////////////SDF///////////////////////
 #ifdef SDF_ENABLE 
 	__int64 startTime;
