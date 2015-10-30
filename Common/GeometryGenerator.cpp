@@ -773,6 +773,23 @@ void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector
 			
 		}
 	}
+}
 
+void GeometryGenerator::CreatePlane(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, 
+	XMFLOAT3 origin, float length)
+{
 
+	for (int i = 0; i < 4; i++)
+	{
+		vs.push_back(origin);
+	}
+
+	vs[0].x += length; vs[0].z += length;
+	vs[1].x += length; vs[1].z -= length;
+	vs[2].x -= length; vs[2].z += length;
+	vs[3].x -= length; vs[3].z -= length;
+
+	is.resize(6);
+	is[0] = 0; is[1] = 1; is[2] = 2;
+	is[3] = 2; is[4] = 1; is[5] = 3;
 }

@@ -86,7 +86,7 @@ public:
 
 	void CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is , Camera &camera, 
 		XMVECTOR boxVert[], XMFLOAT3 lightDir);
-
+	void CreatePlane(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, XMFLOAT3 origin, float length);
 private:
 	void Subdivide(MeshData& meshData);
 	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount, MeshData& meshData);

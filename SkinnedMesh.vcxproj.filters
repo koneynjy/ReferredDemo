@@ -126,8 +126,8 @@
     <ClCompile Include="GPUTime.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="OBJLoader.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="MeshLoader\OBJLoader.cpp">
+      <Filter>MeshLoader</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -281,8 +281,8 @@
     <ClInclude Include="GPUTime.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="LoadOBJ.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="MeshLoader\LoadOBJ.h">
+      <Filter>MeshLoader</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -330,6 +330,8 @@
     <CustomBuild Include="FX\SDFshadow.fx">
       <Filter>FX</Filter>
     </CustomBuild>
-    <CustomBuild Include="FX\SDFVolumeCulling.fx" />
+    <CustomBuild Include="FX\SDFVolumeCulling.fx">
+      <Filter>FX</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>

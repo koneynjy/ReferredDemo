@@ -70,7 +70,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
     <ExecutablePath>$(DXSDK_DIR)\Utilities\bin\x86;$(VCInstallDir)bin;$(WindowsSDK_ExecutablePath_x86);$(VSInstallDir)Common7\Tools\bin;$(VSInstallDir)Common7\tools;$(VSInstallDir)Common7\ide;$(ProgramFiles)\HTML Help Workshop;$(MSBuildToolsPath32);$(VSInstallDir);$(SystemRoot)\SysWow64;$(FxCopDir);$(PATH);</ExecutablePath>
-    <IncludePath>$(DXSDK_DIR)Include;..\..\Common;$(VCInstallDir)include;$(VCInstallDir)atlmfc\include;$(WindowsSDK_IncludePath);</IncludePath>
+    <IncludePath>$(DXSDK_DIR)\Include;Common;XML;$(IncludePath);</IncludePath>
     <LibraryPath>$(DXSDK_DIR)Lib\x86;$(LibraryPath);Lib</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -176,9 +176,9 @@
     <ClCompile Include="MeshLoader\baseDefine.cpp" />
     <ClCompile Include="MeshLoader\Mesh.cpp" />
     <ClCompile Include="MeshLoader\ModelFileParse.cpp" />
+    <ClCompile Include="MeshLoader\OBJLoader.cpp" />
     <ClCompile Include="MeshLoader\submesh.cpp" />
     <ClCompile Include="MeshLoader\TGALoader.cpp" />
-    <ClCompile Include="OBJLoader.cpp" />
     <ClCompile Include="RenderStates.cpp" />
     <ClCompile Include="SDF.cpp" />
     <ClCompile Include="SDFShadow.cpp" />
@@ -211,9 +211,9 @@
     <ClInclude Include="Effects.h" />
     <ClInclude Include="GPUTime.h" />
     <ClInclude Include="LoadM3d.h" />
-    <ClInclude Include="LoadOBJ.h" />
     <ClInclude Include="MeshGeometry.h" />
     <ClInclude Include="MeshLoader\baseDefine.h" />
+    <ClInclude Include="MeshLoader\LoadOBJ.h" />
     <ClInclude Include="MeshLoader\Mesh.h" />
     <ClInclude Include="MeshLoader\ModelFileParse.h" />
     <ClInclude Include="MeshLoader\submesh.h" />

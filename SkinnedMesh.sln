@@ -5,6 +5,8 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SkinnedMesh", "SkinnedMesh.vcxproj", "{93BE533A-C8AD-4CFD-9C1B-B8C7055503AB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SDFGen", "SDFGen\SDFGen.vcxproj", "{4B4242B4-E917-4B76-8907-5523DBDFABA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -21,6 +23,12 @@ Global
 		{93BE533A-C8AD-4CFD-9C1B-B8C7055503AB}.Release|Win32.Build.0 = Release|Win32
 		{93BE533A-C8AD-4CFD-9C1B-B8C7055503AB}.Release|x64.ActiveCfg = Release|x64
 		{93BE533A-C8AD-4CFD-9C1B-B8C7055503AB}.Release|x64.Build.0 = Release|x64
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Debug|Win32.ActiveCfg = Debug|Win32
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Debug|Win32.Build.0 = Debug|Win32
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Debug|x64.ActiveCfg = Debug|Win32
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Release|Win32.ActiveCfg = Release|Win32
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Release|Win32.Build.0 = Release|Win32
+		{4B4242B4-E917-4B76-8907-5523DBDFABA9}.Release|x64.ActiveCfg = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
