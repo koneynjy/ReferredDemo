@@ -151,7 +151,8 @@ VertexOut SkinnedVS(SkinnedVertexIn vin)
 void PS(VertexOut pin
 	,out float4 c0 : SV_Target0
 	,out float4 c1 : SV_Target1
-	,out float z : SV_Depth
+	,out float c2 : SV_Target2
+	//,out float z:SV_Depth
 	)
 {
 	pin.NormalW = normalize(pin.NormalW);
@@ -159,7 +160,8 @@ void PS(VertexOut pin
 	float3 bumpedNormalW = NormalSampleToWorldSpace(normalMapSample, pin.NormalW, pin.TangentW);
 	c0 = StoreGBufferRT0(bumpedNormalW, gMaterial.Specular.w);
 	c1 = StoreGBufferRT1(gDiffuseMap.Sample(samLinear, pin.Tex).xyz * gMaterial.Diffuse.xyz, gMaterial.Specular.xyz);
-	z = pin.z / gFarClipDist;
+	c2 = pin.z / gFarClipDist;
+	//z = c2;
 }
 
 ///////////////////base no nmap///////////
@@ -167,7 +169,8 @@ void PSBase(VertexOutBase pin
 	,uniform bool gRefEnable
 	,out float4 c0 : SV_Target0
 	,out float4 c1 : SV_Target1
-	,out float z : SV_Depth
+	,out float c2 : SV_Target2
+	//,out float z : SV_Depth
 	)
 {
 	pin.NormalW = normalize(pin.NormalW);
@@ -181,7 +184,8 @@ void PSBase(VertexOutBase pin
 		diff += gMaterial.Reflect*reflectionColor;
 	}
 	c1 = StoreGBufferRT1(diff.xyz, gMaterial.Specular.xyz);
-	z = pin.z / gFarClipDist;
+	c2 = pin.z / gFarClipDist;
+	//z = c2;
 }
 
 

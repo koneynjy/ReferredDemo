@@ -24,7 +24,9 @@ public:
 	static ID3D11DepthStencilState* LessDSS;
 	static ID3D11DepthStencilState* NoDepth;
 	static ID3D11DepthStencilState* SSRDSS;
-	 
+	static ID3D11DepthStencilState* CullFrontDSS;
+	static ID3D11DepthStencilState* CullBackDSS;
+
 	static ID3D11BlendState* AlphaToCoverageBS;
 	static ID3D11BlendState* TransparentBS;
 };

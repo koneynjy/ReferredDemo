@@ -30,11 +30,12 @@
 #include "SDF.h"
 #include "SDFShadow.h"
 #include "SSR.h"
-#pragma optimize("", off)
+//#pragma optimize("", off)
 //#define DEBUGTEX
-#define TESTMODEL
-//#define SDF_ENABLE
-//#define LOADOBJ
+//#define TESTMODEL
+#define SDF_ENABLE
+#define LOADOBJ
+const UINT st = 54, ed = 62;
 struct BoundingSphere
 {
 	BoundingSphere() : Center(0.0f, 0.0f, 0.0f), Radius(0.0f) {}
@@ -71,11 +72,10 @@ private:
 	void BuildModelFromOBJ();
 	void BuildScreenQuadGeometryBuffers();
 	void BuildQuadPlane();
+	void BuildCullingVolume(XMFLOAT3& lightDir);
 	void BuildSignedDistanceFieldData();
-	void SDFShadowPass(SDFModel* sdfMoel,
-	ID3D11ShaderResourceView* sdfSRV,
-	XMFLOAT4X4 &worldMat);
-	void SDFVolumeCulling(SDFModel* sdfModel, XMFLOAT4X4& worldMat);
+	void SDFShadowPass(UINT idx);
+	void SDFVolumeCulling(UINT idx);
 	void SSRPass();
 
 private:
@@ -120,10 +120,15 @@ private:
 	ID3D11Buffer* mPlaneVB;
 	ID3D11Buffer* mPlaneIB;
 
+	vector<ID3D11ShaderResourceView*> mObjSDFSRV;
+	vector<SDFModel*> mObjSDF;
 	vector<ID3D11Buffer*> mObjModelVB;
 	vector<ID3D11Buffer*> mObjModelIB;
 	vector<UINT> mObjModelCnt;
 	vector<XMFLOAT4X4> mObjModelMat;
+	vector<ID3D11Buffer*> mObjCullingVolumeVB;
+	vector<ID3D11Buffer*> mObjCullingVolumeIB;
+	vector<UINT> mObjCullingVolumeCnt;
 
 	ID3D11ShaderResourceView* mStoneTexSRV;
 	ID3D11ShaderResourceView* mBrickTexSRV;
@@ -211,9 +216,16 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	
 	mLastMousePos.x = 0;
 	mLastMousePos.y = 0;
-
+#ifdef LOADOBJ
+	mCam.SetPosition(4350.0f, 300, -550.0f);
+	mCam.RotateY(90);
+#else
 	mCam.SetPosition(0.0f, 2.0f, -15.0f);
-	//mCam.SetPosition(1450.0f, 0, 1250.0f);
+#endif // LOADOBJ
+
+	
+	
+	//mCam.SetPosition(1450.0f, 124, 1250.0f);
 	// Estimate the scene bounding sphere manually since we know how the scene was constructed.
 	// The grid is the "widest object" with a width of 20 and depth of 30.0f, and centered at
 	// the world space origin.  In general, you need to loop over every world space vertex
@@ -229,7 +241,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	XMStoreFloat4x4(&mBoxWorld, XMMatrixMultiply(boxScale, boxOffset));
 
 	XMMATRIX skullScale = XMMatrixScaling(1, 1, 1);
-	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, -124.0f, 0.0f);
+	XMMATRIX skullOffset = XMMatrixTranslation(0.0f, 0.0f, 0.0f);
 	XMStoreFloat4x4(&mSkullWorld, XMMatrixMultiply(skullScale, skullOffset));
 	//XMStoreFloat4x4(&mSkullWorld, XMMatrixIdentity());
 	for(int i = 0; i < 5; ++i)
@@ -278,7 +290,7 @@ SkinnedMeshApp::SkinnedMeshApp(HINSTANCE hInstance)
 	mCylinderMat.Reflect  = XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f);
 
 	mSphereMat.Ambient  = XMFLOAT4(0.3f, 0.4f, 0.5f, 1.0f);
-	mSphereMat.Diffuse  = XMFLOAT4(0.2f, 0.3f, 0.4f, 1.0f);
+	mSphereMat.Diffuse  = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	mSphereMat.Specular = XMFLOAT4(0.9f, 0.9f, 0.9f, 16.0f);
 	mSphereMat.Reflect  = XMFLOAT4(0.3f, 0.3f, 0.3f, 1.0f);
 
@@ -337,7 +349,7 @@ bool SkinnedMeshApp::Init()
 	mSky  = new Sky(md3dDevice, L"Textures/desertcube1024.dds", 5000.0f);
 	mSmap = new ShadowMap(md3dDevice, SMapSize, SMapSize);
 
-	mCam.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+	mCam.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 10000.0f);
 	mSsao = new Ssao(md3dDevice, md3dImmediateContext, mClientWidth, mClientHeight, mCam.GetFovY(), mCam.GetFarZ());
 
 	mStoneTexSRV = mTexMgr.CreateTexture(L"Textures/floor.dds");
@@ -348,6 +360,7 @@ bool SkinnedMeshApp::Init()
 	BuildShapeGeometryBuffers();
 #ifdef LOADOBJ
 	BuildModelFromOBJ();
+	BuildCullingVolume(mDirLights[1].Direction);
 #else
 
 #ifdef TESTMODEL
@@ -358,6 +371,8 @@ bool SkinnedMeshApp::Init()
 #endif // LOADOBJ
 	
 	BuildScreenQuadGeometryBuffers();
+	BuildQuadPlane();
+	
 
 	mCharacterModel = new SkinnedModel(md3dDevice, mTexMgr, "Models\\soldier.m3d", L"Textures\\");
 	mCharacterInstance1.Model = mCharacterModel;
@@ -390,7 +405,7 @@ void SkinnedMeshApp::OnResize()
 {
 	D3DApp::OnResize();
 
-	mCam.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 1000.0f);
+	mCam.SetLens(0.25f*MathHelper::Pi, AspectRatio(), 1.0f, 10000.0f);
 
 	if( mSsao )
 	{
@@ -403,17 +418,20 @@ void SkinnedMeshApp::UpdateScene(float dt)
 	//
 	// Control the camera.
 	//
+	float scale = dt;
+	if (GetAsyncKeyState(VK_LSHIFT) & 0x8000)
+		scale *= 20;
 	if( GetAsyncKeyState('W') & 0x8000 )
-		mCam.Walk(10.0f*dt);
+		mCam.Walk(10.0f*scale);
 
 	if( GetAsyncKeyState('S') & 0x8000 )
-		mCam.Walk(-10.0f*dt);
+		mCam.Walk(-10.0f*scale);
 
 	if( GetAsyncKeyState('A') & 0x8000 )
-		mCam.Strafe(-10.0f*dt);
+		mCam.Strafe(-10.0f*scale);
 
 	if( GetAsyncKeyState('D') & 0x8000 )
-		mCam.Strafe(10.0f*dt);
+		mCam.Strafe(10.0f*scale);
 
 	//
 	// Animate the character.
@@ -1182,7 +1200,7 @@ void SkinnedMeshApp::DrawScreenQuad(ID3D11ShaderResourceView* srv)
 		Effects::DebugTexFX->SetWorldViewProj(world);
 		Effects::DebugTexFX->SetTexture(srv);
 		Effects::DebugTexFX->SetIntTexture(mDeferred->mStencilMapSRV);
-		Effects::DebugTexFX->SetSDF(mSkullSDFSRV);
+		//Effects::DebugTexFX->SetSDF(mSkullSDFSRV);
 		Effects::DebugTexFX->setD(d);
 		tech->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
 		md3dImmediateContext->DrawIndexed(6, 0, 0);
@@ -1226,6 +1244,7 @@ void SkinnedMeshApp::BuildShadowTransform()
 	XMStoreFloat4x4(&mShadowTransform, S);
 }
 
+static const float scale = 1.0f;
 void SkinnedMeshApp::BuildGBuffer()
 {
 	//md3dImmediateContext->OMSetDepthStencilState(0, 0);
@@ -1270,7 +1289,7 @@ void SkinnedMeshApp::BuildGBuffer()
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
 		
-		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, SSR_EFFECT);	   //for ssr
+		md3dImmediateContext->OMSetDepthStencilState(RenderStates::LessDSS, 0);	   //for ssr
 		Effects::GBufferFX->SetWorld(world);
 		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
 		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
@@ -1351,7 +1370,7 @@ void SkinnedMeshApp::BuildGBuffer()
 	gBufferBase->GetDesc(&techDesc);
 	for (UINT p = 0; p < techDesc.Passes; ++p)
 	{
-		world = XMLoadFloat4x4(&mSkullWorld);
+		world = XMMatrixScaling(0.2f,0.2f,0.2f) * XMLoadFloat4x4(&mSkullWorld);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
 
@@ -1365,7 +1384,32 @@ void SkinnedMeshApp::BuildGBuffer()
 		md3dImmediateContext->DrawIndexed(mSkullIndexCount, 0, 0);
 	}
 
+	//plane 
 #ifdef LOADOBJ
+
+	stride = sizeof(Vertex::Basic32);
+	offset = 0;
+
+	md3dImmediateContext->IASetInputLayout(InputLayouts::Basic32);
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mPlaneVB, &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mPlaneIB, DXGI_FORMAT_R16_UINT, 0);
+
+	gBufferBase->GetDesc(&techDesc);
+	for (UINT p = 0; p < techDesc.Passes; ++p)
+	{
+		world = XMMatrixIdentity();
+		worldInvTranspose = MathHelper::InverseTranspose(world);
+		worldViewProj = world*viewProj;
+
+		Effects::GBufferFX->SetWorld(world);
+		Effects::GBufferFX->SetWorldInvTranspose(worldInvTranspose);
+		Effects::GBufferFX->SetWorldViewProj(worldViewProj);
+		Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
+		Effects::GBufferFX->SetMaterial(mSphereMat);
+
+		gBufferBaseReflect->GetPassByIndex(p)->Apply(0, md3dImmediateContext);
+		md3dImmediateContext->DrawIndexed(6, 0, 0);
+	}
 
 	stride = sizeof(Vertex::Basic32);
 	offset = 0;
@@ -1373,13 +1417,13 @@ void SkinnedMeshApp::BuildGBuffer()
 	md3dImmediateContext->IASetInputLayout(InputLayouts::Basic32);
 	gBufferBase->GetDesc(&techDesc);
 	Effects::GBufferFX->SetTexTransform(XMMatrixIdentity());
-	Effects::GBufferFX->SetMaterial(mSkullMat);
+	Effects::GBufferFX->SetMaterial(mSphereMat);
 
-	for (int i = 0; i < mObjModelIB.size(); i++)
+	for (int i = 50; i < 51; i++)
 	{
 		md3dImmediateContext->IASetVertexBuffers(0, 1, &mObjModelVB[i], &stride, &offset);
 		md3dImmediateContext->IASetIndexBuffer(mObjModelIB[i], DXGI_FORMAT_R32_UINT, 0);
-		world = XMLoadFloat4x4(&mObjModelMat[i]);
+		world = XMMatrixScaling(1.0f,scale, 1.0f) * XMLoadFloat4x4(&mObjModelMat[i]);
 		worldInvTranspose = MathHelper::InverseTranspose(world);
 		worldViewProj = world*viewProj;
 		Effects::GBufferFX->SetWorld(world);
@@ -1466,22 +1510,14 @@ void SkinnedMeshApp::DeferredShadingPass()
 	
 	BuildGBuffer();
 	//SSRPass();
-	__int64 startTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+	mSDFShadow->ClearShadow(md3dImmediateContext);
 #ifdef SDF_ENABLE
-	
 	//SDFShadowPass(sphereModel, mSphereSDFSRV, mSphereWorld[3]);
-#ifdef TESTMODEL
-	SDFVolumeCulling(testModel, mSkullWorld);
-	SDFShadowPass(testModel, mSkullSDFSRV, mSkullWorld);
-#else
-	SDFShadowPass(skullModel, mSkullSDFSRV, mSkullWorld);
-#endif // TESTMODEL
-	__int64 endTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
-
-	sdfTime = (endTime - startTime)*mTimer.mSecondsPerCount * 1000;
-	
+	for (int i = 50; i < 51; i++)
+	{
+		SDFVolumeCulling(i);
+		SDFShadowPass(i);
+	}
 	//SDFShadowPass(cylinderModel, mCylinderSDFSRV, mCylWorld[3]);
 
 	//mSDFShadow->ClearShadow(md3dImmediateContext);
@@ -1501,8 +1537,8 @@ void SkinnedMeshApp::DeferredShadingPass()
 	// This render pass is needed to compute the ambient occlusion.
 	// Notice that we use the main depth/stencil buffer in this pass.  
 
-	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
-	mSsao->BlurAmbientMapDeferred(2, mDeferred->mDepthMapSRV, mDeferred->mGBufferSRV0);
+	mSsao->ComputeSsaoDeferred(mCam, mDeferred->mLinearDepthMapSRV, mDeferred->mGBufferSRV0);
+	mSsao->BlurAmbientMapDeferred(2, mDeferred->mLinearDepthMapSRV, mDeferred->mGBufferSRV0);
 
 	//
 	// Restore the back and depth buffer and viewport to the OM stage.
@@ -1523,7 +1559,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	
 #ifdef DEBUGTEX
 	//DrawScreenQuad(mSkullSDFSRV);
-	DrawScreenQuad(mSDFShadow->mSDFLiVolDepthFrontSRV);
+	DrawScreenQuad(mSDFShadow->mSDFShadowSRV);
 #else
 	Effects::DeferredShadingFX->SetViewInv(viewInv);
 	Effects::DeferredShadingFX->SetEyePosW(mCam.GetPosition());
@@ -1534,7 +1570,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	Effects::DeferredShadingFX->SetSDFShadow(mSDFShadow->mSDFShadowSRV);
 	Effects::DeferredShadingFX->SetShadowMap(mSmap->DepthMapSRV());
 	Effects::DeferredShadingFX->SetSsaoMap(mSsao->AmbientSRV());
-	Effects::DeferredShadingFX->SetDepthMap(mDeferred->mDepthMapSRV);
+	Effects::DeferredShadingFX->SetDepthMap(mDeferred->mLinearDepthMapSRV);
 	Effects::DeferredShadingFX->SetGBuffer0(mDeferred->mGBufferSRV0);
 	Effects::DeferredShadingFX->SetGBuffer1(mDeferred->mGBufferSRV1);
 	Effects::DeferredShadingFX->SetSSRMap(mSSR->mSSRSRV);
@@ -1582,42 +1618,49 @@ void SkinnedMeshApp::DeferredShadingPass()
 	HR(mSwapChain->Present(0, 0));
 }
 
-void SkinnedMeshApp::SDFShadowPass(
-	SDFModel* sdfMoel,
-	ID3D11ShaderResourceView* sdfSRV,
-	XMFLOAT4X4 &worldMat)
+void SkinnedMeshApp::SDFShadowPass(UINT idx)
 {
+	SDFModel* sdfModel = mObjSDF[idx];
+	XMFLOAT4X4 worldMat = mObjModelMat[idx];
 	XMMATRIX viewInv;
 	///////////////////////////g pass////////////////////////////////
 	viewInv.r[0] = mCam.GetRightXM();
 	viewInv.r[1] = mCam.GetUpXM();
 	viewInv.r[2] = mCam.GetLookXM();
-
-	mSDFShadow->SetRenderTarget(md3dImmediateContext);
-	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
+	XMMATRIX view = mCam.View();
+	XMMATRIX viewProj = mCam.ViewProj();
+	mSDFShadow->SetRenderTarget(md3dImmediateContext, mDeferred->mDepthMapDSV);
+	md3dImmediateContext->RSSetState(RenderStates::CullBackRS);
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::CullBackDSS, 0xff);
+	Effects::SDFShadowFX->SetFarClipDist(mCam.GetFarZ());
+	Effects::SDFShadowFX->SetViewProj(viewProj);
+	Effects::SDFShadowFX->SetView(view);
 	Effects::SDFShadowFX->SetViewInv(viewInv);
 	Effects::SDFShadowFX->SetEyePosW(mCam.GetPosition());
-	Effects::SDFShadowFX->SetLightDirs(mDirLights[1].Direction);
-	XMFLOAT3 origin = sdfMoel->GetOrigin();
-	XMFLOAT3 bounds = sdfMoel->GetBounds();
+	
+	XMFLOAT3 origin = sdfModel->GetOrigin();
+	XMFLOAT3 bounds = sdfModel->GetBounds();
 	XMFLOAT4 extends = XMFLOAT4(bounds.x * 0.5f, bounds.y * 0.5f, bounds.z * 0.5f,0.0f);
-	XMMATRIX SDFToWordInv0 = XMLoadFloat4x4(&worldMat);
+	
+	XMMATRIX scaleMat = XMMatrixScaling(1.0f, scale, 1.0f);
+	
+	XMMATRIX SDFToWordInv0 = scaleMat * XMLoadFloat4x4(&worldMat);
 	XMVECTOR det;
 	SDFToWordInv0 = XMMatrixInverse(&det, SDFToWordInv0) * XMMatrixTranslation(-origin.x, -origin.y, -origin.z);
 	SDFToWordInv0.r[3] += XMLoadFloat4(&extends);
-
+	XMMATRIX worldInvTranspose = XMMatrixInverse(&det, scaleMat);
+	XMFLOAT3 light;
+	XMStoreFloat3(&light, XMVector3Normalize(XMVector4Transform(XMLoadFloat3(&mDirLights[1].Direction) , worldInvTranspose)));
+	Effects::SDFShadowFX->SetLightDirs(light);
 	Effects::SDFShadowFX->SetSDFBounds0(bounds);
 	Effects::SDFShadowFX->SetSDFToWordInv0(SDFToWordInv0);
-
 	Effects::SDFShadowFX->SetGBuffer0(mDeferred->mGBufferSRV0);
-	Effects::SDFShadowFX->SetDepthMap(mDeferred->mDepthMapSRV);
-	Effects::SDFShadowFX->SetSDF0(sdfSRV);
-	Effects::SDFShadowFX->SetFrontDepthMap(mSDFShadow->mSDFLiVolDepthFrontSRV);
-	Effects::SDFShadowFX->SetBackDepthMap(mSDFShadow->mSDFLiVolDepthBackSRV);
+	Effects::SDFShadowFX->SetDepthMap(mDeferred->mLinearDepthMapSRV);
+	Effects::SDFShadowFX->SetSDF0(mObjSDFSRV[idx]);
 	UINT stride = sizeof(XMFLOAT3);
 	UINT offset = 0;
-	md3dImmediateContext->IASetVertexBuffers(0, 1, &mDeferred->mVB, &stride, &offset);
-	md3dImmediateContext->IASetIndexBuffer(mDeferred->mIB, DXGI_FORMAT_R16_UINT, 0);
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mObjCullingVolumeVB[idx], &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mObjCullingVolumeIB[idx], DXGI_FORMAT_R16_UINT, 0);
 	md3dImmediateContext->IASetInputLayout(InputLayouts::Pos);
 	md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -1630,7 +1673,7 @@ void SkinnedMeshApp::SDFShadowPass(
 
 		pass->Apply(0, md3dImmediateContext);
 
-		md3dImmediateContext->DrawIndexed(mDeferred->mIndexCount, 0, 0);
+		md3dImmediateContext->DrawIndexed(mObjCullingVolumeCnt[idx], 0, 0);
 	}
 
 
@@ -1668,7 +1711,7 @@ void SkinnedMeshApp::SSRPass()
 
 	Effects::SSRFX->SetGBuffer0(mDeferred->mGBufferSRV0);
 	Effects::SSRFX->SetFrameBuffer(mDeferred->mGBufferSRV1);
-	Effects::SSRFX->SetDepthMap(mDeferred->mDepthMapSRV);
+	Effects::SSRFX->SetDepthMap(mDeferred->mLinearDepthMapSRV);
 	Effects::SSRFX->SetCubeMap(mSky->CubeMapSRV());
 	
 
@@ -1699,24 +1742,26 @@ void SkinnedMeshApp::SSRPass()
 	md3dImmediateContext->OMSetDepthStencilState(0, 0);
 }
 
-void SkinnedMeshApp::SDFVolumeCulling(SDFModel* sdfModel, XMFLOAT4X4& worldMat)
+void SkinnedMeshApp::SDFVolumeCulling(UINT idx)
 {
 	XMMATRIX viewProj = mCam.ViewProj();
 	float farClipDist = mCam.GetFarZ();
 	
-	mSDFShadow->GetCullingVolume(md3dDevice, sdfModel->GetOrigin(), sdfModel->GetExtend(), 
-		mDirLights[1].Direction, mCam, worldMat);
-	mSDFShadow->SetRenderTarget(md3dImmediateContext, false);
-	md3dImmediateContext->RSSetState(RenderStates::CullBackRS);
-	md3dImmediateContext->OMSetDepthStencilState(RenderStates::NoDepth, 0);
+// 	mSDFShadow->GetCullingVolume(md3dDevice, sdfModel->GetOrigin(), sdfModel->GetExtend(), 
+// 		mDirLights[1].Direction, worldMat);
+	//mSDFShadow->SetRenderTarget(md3dImmediateContext, false);
+	ID3D11RenderTargetView* renderTargets[1] = { 0 };
+	md3dImmediateContext->OMSetRenderTargets(1, renderTargets, mDeferred->mDepthMapDSV);
+	md3dImmediateContext->RSSetState(RenderStates::CullFrontRS);
+	md3dImmediateContext->OMSetDepthStencilState(RenderStates::CullFrontDSS, 0xff);
 
 	Effects::SDFVolumeCullingFX->SetViewProj(viewProj);
 	Effects::SDFVolumeCullingFX->SetFarClipDist(farClipDist);
 
 	UINT stride = sizeof(XMFLOAT3);
 	UINT offset = 0;
-	md3dImmediateContext->IASetVertexBuffers(0, 1, &mSDFShadow->mVB, &stride, &offset);
-	md3dImmediateContext->IASetIndexBuffer(mSDFShadow->mIB, DXGI_FORMAT_R16_UINT, 0);
+	md3dImmediateContext->IASetVertexBuffers(0, 1, &mObjCullingVolumeVB[idx], &stride, &offset);
+	md3dImmediateContext->IASetIndexBuffer(mObjCullingVolumeIB[idx], DXGI_FORMAT_R16_UINT, 0);
 	md3dImmediateContext->IASetInputLayout(InputLayouts::Pos);
 	md3dImmediateContext->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
@@ -1729,22 +1774,22 @@ void SkinnedMeshApp::SDFVolumeCulling(SDFModel* sdfModel, XMFLOAT4X4& worldMat)
 
 		pass->Apply(0, md3dImmediateContext);
 
-		md3dImmediateContext->DrawIndexed(mSDFShadow->mIndexCount, 0, 0);
+		md3dImmediateContext->DrawIndexed(mObjCullingVolumeCnt[idx], 0, 0);
 	}
 
-	mSDFShadow->SetRenderTarget(md3dImmediateContext, true);
-	md3dImmediateContext->RSSetState(RenderStates::CullFrontRS);
-
-	Effects::SDFVolumeCullingFX->SDFVolumeDepthTech->GetDesc(&techDesc);
-
-	for (UINT p = 0; p < techDesc.Passes; ++p)
-	{
-		ID3DX11EffectPass* pass = Effects::SDFVolumeCullingFX->SDFVolumeDepthTech->GetPassByIndex(p);
-
-		pass->Apply(0, md3dImmediateContext);
-
-		md3dImmediateContext->DrawIndexed(mSDFShadow->mIndexCount, 0, 0);
-	}
+// 	mSDFShadow->SetRenderTarget(md3dImmediateContext, true);
+// 	md3dImmediateContext->RSSetState(RenderStates::CullFrontRS);
+// 
+// 	Effects::SDFVolumeCullingFX->SDFVolumeDepthTech->GetDesc(&techDesc);
+// 
+// 	for (UINT p = 0; p < techDesc.Passes; ++p)
+// 	{
+// 		ID3DX11EffectPass* pass = Effects::SDFVolumeCullingFX->SDFVolumeDepthTech->GetPassByIndex(p);
+// 
+// 		pass->Apply(0, md3dImmediateContext);
+// 
+// 		md3dImmediateContext->DrawIndexed(mObjCullingVolumeCnt[idx], 0, 0);
+// 	}
 
 	// Turn off wireframe.
 	md3dImmediateContext->RSSetState(0);
@@ -2042,34 +2087,35 @@ void SkinnedMeshApp::BuildSkullGeometryBuffers()
 void SkinnedMeshApp::BuildTestModelSDF()
 {
 	CMesh cmesh;
-	cmesh.Init("D:/combineObjPath/combineObjPath/0038fff2o/0038fff2o.obj", "D:/", XMFLOAT3(0, 0, 0));
+	cmesh.Init("D:/lod/proxy/000e000co.model", "D:/", XMFLOAT3(0, 0, 0));
 	//cmesh.Init("D:/scene/common/zw/zwshu/slj_zwshu0020_wb.model", "D:/", XMFLOAT3(0, 0, 0));
 	////////////////////////////////////////////SDF///////////////////////
+	
 #ifdef SDF_ENABLE 
-	__int64 startTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
+// 	testModel = new SDFModel(cmesh);
+// 	testModel->GenerateSDF(10.0f, false);
+// 	float* testData = NULL;
+// 	unsigned w, h, d;
+// 	testModel->GetSDFData(testData, w, h, d);
+// 	D3D11_TEXTURE3D_DESC texDesc;
+// 	texDesc.Width = w;
+// 	texDesc.Height = h;
+// 	texDesc.Depth = d;
+// 	texDesc.MipLevels = 1;
+// 	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+// 	texDesc.Usage = D3D11_USAGE_DEFAULT;
+// 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+// 	texDesc.CPUAccessFlags = 0;
+// 	texDesc.MiscFlags = 0;
+// 
+// 	D3D11_SUBRESOURCE_DATA subdata;
+// 	subdata.pSysMem = testData;
+// 	subdata.SysMemPitch = w * sizeof(float);
+// 	subdata.SysMemSlicePitch = w * d * sizeof(float);
 	testModel = new SDFModel(cmesh);
-	testModel->GenerateSDF(10.0f, false);
-	float* testData = NULL;
-	unsigned w, h, d;
-	testModel->GetSDFData(testData, w, h, d);
-	D3D11_TEXTURE3D_DESC texDesc;
-	texDesc.Width = w;
-	texDesc.Height = h;
-	texDesc.Depth = d;
-	texDesc.MipLevels = 1;
-	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA subdata;
-	subdata.pSysMem = testData;
-	subdata.SysMemPitch = w * sizeof(float);
-	subdata.SysMemSlicePitch = w * d * sizeof(float);
-	ID3D11Texture3D* SDFMap = 0;
-	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
+	ID3D11Resource* SDFMap = 0;
+	HR(D3DX11CreateTextureFromFile(md3dDevice, L"D:/lod/proxy/000e000co.dds", NULL, NULL, &SDFMap, NULL));
+	//HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
 
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
@@ -2079,11 +2125,9 @@ void SkinnedMeshApp::BuildTestModelSDF()
 	srvDesc.Texture3D.MostDetailedMip = 0;
 	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSkullSDFSRV));
 	ReleaseCOM(SDFMap);
-	__int64 endTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
-
-	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
 #endif
+
+
 	////////////////////////////////////////////////////////////////////////
 	//XMFLOAT3& origin = testModel->GetOrigin();
 	//XMStoreFloat4x4(&mSkullWorld, XMMatrixTranslation(-origin.x, -origin.y, -origin.z));
@@ -2117,6 +2161,13 @@ void SkinnedMeshApp::BuildTestModelSDF()
 
 void SkinnedMeshApp::BuildModelFromOBJ()
 {
+	//////////////
+	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
+	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
+	srvDesc.Texture3D.MipLevels = 1;
+	srvDesc.Texture3D.MostDetailedMip = 0;
+	///////////
 	string file_name = "D:/lod/proxy/";
 	vector<CMesh> meshs;
 	string path = file_name + "*.*";
@@ -2128,17 +2179,32 @@ void SkinnedMeshApp::BuildModelFromOBJ()
 	{
 		while (_findnext(lf, &file) == 0)//int __cdecl _findnext(long, struct _finddata_t *);如果找到下个文件的名字成功的话就返回0,否则返回-1
 		{
-			if (file.attrib == 0x2020)
+			if (file.attrib != _A_SUBDIR)
 			{
 				string name(file.name);
 				if (name != ".." && name != "." && name.length() > 6 &&
 					name.substr(name.length() - 6, 6) == ".model")  {
 					CMesh cmesh;
 					short x = 0, z = 0;
-					sscanf(name.substr(0, 4).c_str(), "%x", &x);
-					sscanf(name.substr(4, 4).c_str(), "%x", &z);
-					cmesh.Init(file_name + name, "D:/", XMFLOAT3(x * 100 + 50.0, 0, z * 100 + 50.0));
+					sscanf(name.substr(0, 4).c_str(), "%hx", &x);
+					sscanf(name.substr(4, 4).c_str(), "%hx", &z);
+					XMFLOAT3 pos = XMFLOAT3(x * 100 + 50.0f, 0, z * 100 + 50.0f);
+					cmesh.Init(file_name + name, "D:/", pos);
+					XMFLOAT4X4 world;
+					XMStoreFloat4x4(&world, XMMatrixTranslation(pos.x, pos.y, pos.z));
+					SDFModel *sdf = new SDFModel(cmesh);
 					meshs.push_back(std::move(cmesh));
+					mObjSDF.push_back(sdf);
+					mObjModelMat.push_back(world);
+					std::string dds = file_name + name.substr(0, 9) + ".dds";
+					std::wstring wdds(dds.length(), L' ');
+					std::copy(dds.begin(), dds.end(), wdds.begin());
+					ID3D11Resource* SDFMap = 0;
+					ID3D11ShaderResourceView* sdfsrv = 0;
+					HR(D3DX11CreateTextureFromFile(md3dDevice, wdds.c_str(), NULL, NULL, &SDFMap, NULL));
+					HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &sdfsrv));
+					ReleaseCOM(SDFMap);
+					mObjSDFSRV.push_back(sdfsrv);
 				}
 			}
 		}
@@ -2147,43 +2213,31 @@ void SkinnedMeshApp::BuildModelFromOBJ()
 	//cmesh.Init("D:/scene/common/zw/zwshu/slj_zwshu0020_wb.model", "D:/", XMFLOAT3(0, 0, 0));
 	////////////////////////////////////////////SDF///////////////////////
 #ifdef SDF_ENABLE 
-	__int64 startTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&startTime);
-	testModel = new SDFModel(cmesh);
-	testModel->GenerateSDF(10.0f, false);
-	float* testData = NULL;
-	unsigned w, h, d;
-	testModel->GetSDFData(testData, w, h, d);
-	D3D11_TEXTURE3D_DESC texDesc;
-	texDesc.Width = w;
-	texDesc.Height = h;
-	texDesc.Depth = d;
-	texDesc.MipLevels = 1;
-	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	texDesc.Usage = D3D11_USAGE_DEFAULT;
-	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
-	texDesc.CPUAccessFlags = 0;
-	texDesc.MiscFlags = 0;
-
-	D3D11_SUBRESOURCE_DATA subdata;
-	subdata.pSysMem = testData;
-	subdata.SysMemPitch = w * sizeof(float);
-	subdata.SysMemSlicePitch = w * d * sizeof(float);
-	ID3D11Texture3D* SDFMap = 0;
-	HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
-
-
-	D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
-	srvDesc.Format = DXGI_FORMAT_R32_FLOAT;
-	srvDesc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE3D;
-	srvDesc.Texture3D.MipLevels = 1;
-	srvDesc.Texture3D.MostDetailedMip = 0;
-	HR(md3dDevice->CreateShaderResourceView(SDFMap, &srvDesc, &mSkullSDFSRV));
-	ReleaseCOM(SDFMap);
-	__int64 endTime;
-	QueryPerformanceCounter((LARGE_INTEGER*)&endTime);
-
-	double t = (endTime - startTime)*mTimer.mSecondsPerCount;
+	// 	testModel = new SDFModel(cmesh);
+	// 	testModel->GenerateSDF(10.0f, false);
+	// 	float* testData = NULL;
+	// 	unsigned w, h, d;
+	// 	testModel->GetSDFData(testData, w, h, d);
+	// 	D3D11_TEXTURE3D_DESC texDesc;
+	// 	texDesc.Width = w;
+	// 	texDesc.Height = h;
+	// 	texDesc.Depth = d;
+	// 	texDesc.MipLevels = 1;
+	// 	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	// 	texDesc.Usage = D3D11_USAGE_DEFAULT;
+	// 	texDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+	// 	texDesc.CPUAccessFlags = 0;
+	// 	texDesc.MiscFlags = 0;
+	// 
+	// 	D3D11_SUBRESOURCE_DATA subdata;
+	// 	subdata.pSysMem = testData;
+	// 	subdata.SysMemPitch = w * sizeof(float);
+	// 	subdata.SysMemSlicePitch = w * d * sizeof(float);
+	//mSkullWorld = mObjModelMat[0];
+	//testModel = new SDFModel(meshs[0]);
+	//ID3D11Resource* SDFMap = 0;
+	//HR(D3DX11CreateTextureFromFile(md3dDevice, L"D:/lod/proxy/000e000co.dds", NULL, NULL, &SDFMap, NULL));
+	//HR(md3dDevice->CreateTexture3D(&texDesc, &subdata, &SDFMap));
 #endif
 	////////////////////////////////////////////////////////////////////////
 	//XMFLOAT3& origin = testModel->GetOrigin();
@@ -2224,7 +2278,7 @@ void SkinnedMeshApp::BuildModelFromOBJ()
 		vinitData.pSysMem = &vb[0];
 		HR(md3dDevice->CreateBuffer(&vbd, &vinitData, &mObjModelVB[i]));
 
-		ibd.ByteWidth = sizeof(unsigned short)* count;
+		ibd.ByteWidth = sizeof(UINT)* count;
 		iinitData.pSysMem = &ib[0];
 		HR(md3dDevice->CreateBuffer(&ibd, &iinitData, &mObjModelIB[i]));
 
@@ -2282,10 +2336,120 @@ void SkinnedMeshApp::BuildScreenQuadGeometryBuffers()
 void SkinnedMeshApp::BuildQuadPlane()
 {
 	GeometryGenerator gen;
-	vector<XMFLOAT3> vb;
+	vector<Vertex::Basic32> vb;
 	vector<USHORT> ib;
+	Vertex::Basic32 origin;
+	origin.Pos = XMFLOAT3(0, 0, 0);
+	origin.Normal = XMFLOAT3(0, 1, 0);
+	for (int i = 0; i < 4; i++)
+	{
+		vb.push_back(origin);
+	}
 
-	gen.CreatePlane(vb, ib, XMFLOAT3(0, 0, 0), 100000);
+	float length = 100000;
+	vb[0].Pos.x += length; vb[0].Pos.z += length;
+	vb[1].Pos.x += length; vb[1].Pos.z -= length;
+	vb[2].Pos.x -= length; vb[2].Pos.z += length;
+	vb[3].Pos.x -= length; vb[3].Pos.z -= length;
+
+	vb[0].Tex.x = 1; vb[0].Tex.y = 1;
+	vb[1].Tex.x = 1; vb[1].Tex.y = 0;
+	vb[2].Tex.x = 0; vb[2].Tex.y = 1;
+	vb[3].Tex.x = 0; vb[3].Tex.y = 0;
+
+	ib.resize(6);
+	ib[0] = 0; ib[1] = 1; ib[2] = 2;
+	ib[3] = 2; ib[4] = 1; ib[5] = 3;
+
+
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.ByteWidth = sizeof(Vertex::Basic32) * vb.size();
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+	D3D11_SUBRESOURCE_DATA vinitData;
+	vinitData.pSysMem = &vb[0];
+	HR(md3dDevice->CreateBuffer(&vbd, &vinitData, &mPlaneVB));
+
+	//
+	// Pack the indices of all the meshes into one index buffer.
+	//
+
+	D3D11_BUFFER_DESC ibd;
+	ibd.Usage = D3D11_USAGE_IMMUTABLE;
+	ibd.ByteWidth = sizeof(USHORT)* 6;
+	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	ibd.CPUAccessFlags = 0;
+	ibd.MiscFlags = 0;
+	D3D11_SUBRESOURCE_DATA iinitData;
+	iinitData.pSysMem = &ib[0];
+	HR(md3dDevice->CreateBuffer(&ibd, &iinitData, &mPlaneIB));
+
+}
+
+void SkinnedMeshApp::BuildCullingVolume(XMFLOAT3& lightDir)
+{
+	static XMFLOAT3 vt[8] =
+	{
+		XMFLOAT3(1, -1, -1),
+		XMFLOAT3(1, 1, -1),
+		XMFLOAT3(-1, 1, -1),
+		XMFLOAT3(-1, -1, -1),
+		XMFLOAT3(1, -1, 1),
+		XMFLOAT3(1, 1, 1),
+		XMFLOAT3(-1, 1, 1),
+		XMFLOAT3(-1, -1, 1),
+	};
+
+	GeometryGenerator geoGen;
+	D3D11_BUFFER_DESC vbd;
+	vbd.Usage = D3D11_USAGE_IMMUTABLE;
+	vbd.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vbd.CPUAccessFlags = 0;
+	vbd.MiscFlags = 0;
+	vbd.StructureByteStride = 0;
+
+	D3D11_SUBRESOURCE_DATA vinitData;
+
+	D3D11_BUFFER_DESC ibd;
+	ibd.Usage = D3D11_USAGE_IMMUTABLE;
+	ibd.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	ibd.CPUAccessFlags = 0;
+	ibd.StructureByteStride = 0;
+	ibd.MiscFlags = 0;
+
+	D3D11_SUBRESOURCE_DATA iinitData;
+	
+	for (int k = 0; k < 62; k++)
+	{
+		XMVECTOR vert[8];
+		XMVECTOR cent = XMLoadFloat3(&mObjSDF[k]->GetOrigin());
+		XMVECTOR ext = XMLoadFloat3(&mObjSDF[k]->GetModelExtend());
+		XMMATRIX world = XMMatrixScaling(1.0f,scale,1.0f) * XMLoadFloat4x4(&mObjModelMat[k]);
+		for (int i = 0; i < 8; i++){
+			vert[i] = cent + XMLoadFloat3(&vt[i]) * ext;
+			vert[i].m128_f32[3] = 1.0f;
+			vert[i] = XMVector4Transform(vert[i], world);
+		}
+
+		std::vector<XMFLOAT3> vertices;
+		std::vector<USHORT> indices16;
+		geoGen.CreateLightVolume(vertices, indices16, vert, lightDir);
+
+		ID3D11Buffer *vb, *ib;
+		vbd.ByteWidth = sizeof(XMFLOAT3)* vertices.size();
+		vinitData.pSysMem = &vertices[0];
+		HR(md3dDevice->CreateBuffer(&vbd, &vinitData, &vb));
+
+		UINT cnt = indices16.size();
+		ibd.ByteWidth = sizeof(USHORT)* cnt;
+		iinitData.pSysMem = &indices16[0];
+		HR(md3dDevice->CreateBuffer(&ibd, &iinitData, &ib));
+		mObjCullingVolumeVB.push_back(vb);
+		mObjCullingVolumeIB.push_back(ib);
+		mObjCullingVolumeCnt.push_back(cnt);
+	}
 }
 
 #pragma endregion

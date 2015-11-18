@@ -17,7 +17,6 @@
 
 #include "d3dUtil.h"
 #include "Camera.h"
-
 class GeometryGenerator
 {
 public:
@@ -84,9 +83,8 @@ public:
 
 	void CreateFarPlaneQuad(MeshData& meshData, Camera &camera);
 
-	void CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is , Camera &camera, 
+	void CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, 
 		XMVECTOR boxVert[], XMFLOAT3 lightDir);
-	void CreatePlane(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, XMFLOAT3 origin, float length);
 private:
 	void Subdivide(MeshData& meshData);
 	void BuildCylinderTopCap(float bottomRadius, float topRadius, float height, UINT sliceCount, UINT stackCount, MeshData& meshData);

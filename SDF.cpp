@@ -25,7 +25,7 @@ SDFModel::SDFModel(GeometryGenerator::MeshData &md)
 	meshData->Mats.push_back(FMaterial());
 	boxSphereBounds = new FBoxSphereBounds();
 	GenerateBoxSphereBounds(boxSphereBounds, meshData);
-	sdfData = new FDistanceFieldVolumeData();
+	sdfData = new FDistanceFieldVolumeData(boxSphereBounds->GetBox());
 }
 
 SDFModel::SDFModel(CMesh& cmesh)
@@ -68,7 +68,7 @@ SDFModel::SDFModel(CMesh& cmesh)
 
 	boxSphereBounds = new FBoxSphereBounds();
 	GenerateBoxSphereBounds(boxSphereBounds, meshData);
-	sdfData = new FDistanceFieldVolumeData();
+	sdfData = new FDistanceFieldVolumeData(boxSphereBounds->GetBox());
 }
 
 SDFModel::SDFModel(std::vector<Vertex::Basic32>& vert, std::vector<UINT> &ind)
@@ -92,7 +92,7 @@ SDFModel::SDFModel(std::vector<Vertex::Basic32>& vert, std::vector<UINT> &ind)
 	}
 	boxSphereBounds = new FBoxSphereBounds();
 	GenerateBoxSphereBounds(boxSphereBounds, meshData);
-	sdfData = new FDistanceFieldVolumeData();
+	sdfData = new FDistanceFieldVolumeData(boxSphereBounds->GetBox());
 }
 
 SDFModel::~SDFModel()
@@ -134,6 +134,12 @@ XMFLOAT3 SDFModel::GetBounds()
 XMFLOAT3 SDFModel::GetExtend()
 {
 	FVector ret = (sdfData->LocalBoundingBox.Max - sdfData->LocalBoundingBox.Min) / 2;
+	return *(XMFLOAT3*)&ret;
+}
+
+XMFLOAT3 SDFModel::GetModelExtend()
+{
+	FVector ret = boxSphereBounds->BoxExtent;
 	return *(XMFLOAT3*)&ret;
 }
 

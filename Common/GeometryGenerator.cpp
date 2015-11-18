@@ -702,9 +702,12 @@ static const int boxPlanePoint[6][4] =
 //	  |	/		  | /
 //	 3|/__________|/0
 
-void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, Camera &camera, XMVECTOR boxVert[], XMFLOAT3 lightDir)
+void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, 
+	std::vector<UINT16> &is,
+	XMVECTOR boxVert[],
+	XMFLOAT3 lightDir)
 {
-	static const float tmin = 10000.0f;
+	static const float tmin = 1000000.0f;
 	XMVECTOR dir = XMLoadFloat3(&lightDir);
 	int idcnt = 0;
 	int idv[16];
@@ -762,7 +765,7 @@ void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector
 						idv[u + 8] = vs.size();
 						vs.push_back(XMFLOAT3());
 						XMStoreFloat3(&vs.back(), 
-							boxVert[u + 8] + dir * tmin);
+							boxVert[u] + dir * tmin);
 					}
 
 					is.push_back(idv[u]); is.push_back(idv[v]); is.push_back(idv[v + 8]); 
@@ -773,23 +776,4 @@ void GeometryGenerator::CreateLightVolume(std::vector<XMFLOAT3> &vs, std::vector
 			
 		}
 	}
-}
-
-void GeometryGenerator::CreatePlane(std::vector<XMFLOAT3> &vs, std::vector<UINT16> &is, 
-	XMFLOAT3 origin, float length)
-{
-
-	for (int i = 0; i < 4; i++)
-	{
-		vs.push_back(origin);
-	}
-
-	vs[0].x += length; vs[0].z += length;
-	vs[1].x += length; vs[1].z -= length;
-	vs[2].x -= length; vs[2].z += length;
-	vs[3].x -= length; vs[3].z -= length;
-
-	is.resize(6);
-	is[0] = 0; is[1] = 1; is[2] = 2;
-	is[3] = 2; is[4] = 1; is[5] = 3;
 }

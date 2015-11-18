@@ -37,10 +37,10 @@ struct VertexIn
 
 struct VertexOut
 {
-	float4 PosH			: SV_POSITION;
-	float3 viewDirW		: POSITION0;
-	float2 uv			: POSITION1;
-	float z				: TEXCOORD0;
+	float4 PosH			: POSITION;
+	float3 viewDirW		: TEXCOORD1;
+	float2 uv			: TEXCOORD2;
+	float z				: TEXCOORD3;
 };
 
 uniform float3 zero = float3(-1e-4f, -1e-4f, -1e-4f);
@@ -52,65 +52,6 @@ bool inBounds(float3 start, float3 bounds)
 
 #define CULLING
 
-bool IntersectBounds(float3 start, float3 dir, float3 bounds,
-	out float3 i1, out float length)
-{
-	i1 = float3(0, 0, 0);
-	length = 0;
-	float3 tMin = -start / dir;
-	float3 tMax = (bounds - start) / dir;
-	bounds += float3(1e-4f, 1e-4f, 1e-4f);
-	float3 pInsec[6];
-	float t[6];
-	int cnt = 0, mint = -1, maxt = -1;
-	[unroll]
-	for (int i = 0; i < 3; i++)
-	{
-		float3 pTmp;
-		if (tMin[i] >= 0){
-			pTmp = start + tMin[i] * dir;
-			if (inBounds(pTmp, bounds))
-			{
-				pInsec[cnt] = pTmp;
-				t[cnt] = tMin[i];
-				if (mint < 0 || t[cnt] < t[mint]) mint = cnt;
-				if (maxt < 0 || t[cnt] > t[maxt]) maxt = cnt;
-				++cnt;
-			}
-		}
-
-		if (tMax[i] >= 0){
-			pTmp = start + tMax[i] * dir;
-			if (inBounds(pTmp, bounds))
-			{
-				pInsec[cnt] = pTmp;
-				t[cnt] = tMax[i];
-				if (mint < 0 || t[cnt] < t[mint]) mint = cnt;
-				if (maxt < 0 || t[cnt] > t[maxt]) maxt = cnt;
-				++cnt;
-			}
-		}
-	}
-#ifndef CULLING
-	if (mint >= 0){
-#endif
-		float t1 = 0, t2 = t[maxt];
-		i1 = start;
-		float3 i2 = pInsec[maxt];
-		if (t[maxt] - t[mint] > 0.0001f){
-			i1 = pInsec[mint];
-			t1 = t[mint];
-		}
-		length = t2 - t1;
-		return true;
-#ifndef CULLING
-	}
-#endif
-
-	return false;
-}
-
-
 bool IntersectBoundsCull(float3 start, float3 dir, float3 bounds,
 	out float3 i1, out float length)
 {
@@ -119,18 +60,15 @@ bool IntersectBoundsCull(float3 start, float3 dir, float3 bounds,
 	float3 tMin = -start / dir;
 	float3 tMax = (bounds - start) / dir;
 	bounds += float3(1e-4f, 1e-4f, 1e-4f);
-	float mint = 3.40282e+038f, maxt = 0;
+	float mint = 0, maxt = 0;
 	[unroll]
 	for (int i = 0; i < 3; i++)
 	{
-		if (inBounds(start + tMin[i] * dir, bounds))
-		{
+		if (inBounds(start + tMin[i] * dir, bounds))	{
 			mint = min(tMin[i], mint);
 			maxt = max(tMin[i], maxt);
 		}
-
-		if (inBounds(start + tMax[i] * dir, bounds))
-		{
+		if (inBounds(start + tMax[i] * dir, bounds))	{
 			mint = min(tMax[i], mint);
 			maxt = max(tMax[i], maxt);
 		}
@@ -160,8 +98,7 @@ float CalcShadowFactor(float f)
 	return f - 0.1f;
 }
 
-#define TOTALSTEP 16
-[earlydepthstencil]
+#define TOTALSTEP 32
 float4 PS(VertexOut pin) : SV_Target
 {
 	//return 0.5.rrrr;
@@ -178,21 +115,23 @@ float4 PS(VertexOut pin) : SV_Target
 	float3 dir = -gLightDir;
 	clip(dot(normalW, dir));
 	float3 i1 = float3(0,0,0), i2;
-	float length = 0, len = 0;
+	float length, len = 0;
 	float4 shadow = float4(1.0f, 0, 0, 0);
 	float boundMax = max(gSDFBounds0.x, max(gSDFBounds0.y, gSDFBounds0.z)) * 0.5f;
 	float minstep;
-#ifdef CULLING
+
 	IntersectBoundsCull(posSDF, dir, gSDFBounds0, i1, length);
-#else
-	if (IntersectBounds(posSDF, dir, gSDFBounds0, i1, length))
 	{
-#endif
-		//return float4(i1/ gSDFBounds0, 1.0f);
+		//return float4(0.0f,0,0,0);
 		float3 start = i1;
 		float3 scale = float3(1.0f,1.0f,1.0f) / gSDFBounds0;
 		float step = gSDF0.Sample(samLinear, start * scale).r * boundMax;
 		float smallstep = length / TOTALSTEP;
+		//if (step < 0.00f)
+		//{
+		//	return shadow;
+		//}
+		//if (step < smallstep) step = smallstep;
 		float ori = 0.01f * boundMax;
 		start += ori * dir;
 		len += ori;
@@ -215,9 +154,7 @@ float4 PS(VertexOut pin) : SV_Target
 			len += step;
 			start += step * dir;
 		}
-#ifndef	CULLING
 	}
-#endif
 	//else
 	//{
 	//	shadow.r = 0.5f;
@@ -238,7 +175,6 @@ technique SDFShadowTech
 	pass P0
 	{
 		SetVertexShader(CompileShader(vs_3_0, VS()));
-		//SetGeometryShader(NULL);
 		SetPixelShader(CompileShader(ps_3_0, PS()));
 	}
 };

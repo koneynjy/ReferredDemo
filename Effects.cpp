@@ -438,7 +438,10 @@ SDFShadowEffect::SDFShadowEffect(ID3D11Device* device, const std::wstring& filen
 	:Effect(device, filename)
 {
 	SDFShadowTech			= mFX->GetTechniqueByName("SDFShadowTech");
-
+	
+	FarClipDist				= mFX->GetVariableByName("gFarClipDist")->AsScalar();
+	ViewProj				= mFX->GetVariableByName("gViewProj")->AsMatrix();
+	View					= mFX->GetVariableByName("gView")->AsMatrix();
 	ViewInv					= mFX->GetVariableByName("gViewInv")->AsMatrix();
 	LightDir				= mFX->GetVariableByName("gLightDir")->AsVector();
 	EyePosW					= mFX->GetVariableByName("gEyePosW")->AsVector();
@@ -450,8 +453,6 @@ SDFShadowEffect::SDFShadowEffect(ID3D11Device* device, const std::wstring& filen
 	GBuffer0				= mFX->GetVariableByName("gGBuffer0")->AsShaderResource();
 	DepthMap				= mFX->GetVariableByName("gDepthMap")->AsShaderResource();
 	SDF0					= mFX->GetVariableByName("gSDF0")->AsShaderResource();
-	FrontDepthMap			= mFX->GetVariableByName("gFrontDepthMap")->AsShaderResource();
-	BackDepthMap			= mFX->GetVariableByName("gBackDepthMap")->AsShaderResource();
 }
 
 SDFShadowEffect::~SDFShadowEffect(){};

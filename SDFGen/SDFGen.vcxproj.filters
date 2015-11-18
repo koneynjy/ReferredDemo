@@ -39,5 +39,11 @@
     <ClCompile Include="..\MeshLoader\TGALoader.cpp">
       <Filter>extern</Filter>
     </ClCompile>
+    <ClCompile Include="..\SDF\AsyncWork.cpp">
+      <Filter>extern</Filter>
+    </ClCompile>
+    <ClCompile Include="..\SDF.cpp">
+      <Filter>extern</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

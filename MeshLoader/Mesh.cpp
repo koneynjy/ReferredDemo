@@ -24,6 +24,8 @@ bool CMesh::Init(std::string file_name, std::string dir, XMFLOAT3& pos)
 			submesh sub(this);
 			sub.m_group_info.startIndex = 0;
 			sub.m_group_info.primitives = m_index_list.size() / 3;
+			sub.m_group_info.startVertex = 0;
+			sub.m_group_info.vertices = m_mesh_vertex.size();
 			m_submesh_list.push_back(sub);
 			return true;
 		}
@@ -38,6 +40,8 @@ bool CMesh::Init(std::string file_name, std::string dir, XMFLOAT3& pos)
 			submesh sub(this);
 			sub.m_group_info.startIndex = 0;
 			sub.m_group_info.primitives = m_index_list.size() / 3;
+			sub.m_group_info.startVertex = 0;
+			sub.m_group_info.vertices = m_mesh_vertex.size();
 			m_submesh_list.push_back(sub);
 			XMStoreFloat4x4(&m_world_transform, XMMatrixTranslation(pos.x, pos.y, pos.z));
 			return true;

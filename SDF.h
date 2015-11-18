@@ -11,7 +11,7 @@ public:
 	MeshData *meshData;
 	FDistanceFieldVolumeData *sdfData;
 	FBoxSphereBounds *boxSphereBounds;
-	SDFModel(){};
+	SDFModel():sdfData(NULL){};
 	SDFModel(GeometryGenerator::MeshData &md);
 	SDFModel(CMesh& cmesh);
 	SDFModel(std::vector<Vertex::Basic32>& vert, std::vector<UINT> &ind);
@@ -24,6 +24,7 @@ public:
 	XMFLOAT3 GetOrigin();
 	XMFLOAT3 GetBounds();
 	XMFLOAT3 GetExtend();
+	XMFLOAT3 GetModelExtend();
 	float GetRes();
 	static SDFModel Merge(SDFModel& m0, FVector& Pos0, SDFModel& m1, FVector& Pos1);
 	~SDFModel();

@@ -549,8 +549,10 @@ class SDFShadowEffect : public Effect
 {
 public :
 	SDFShadowEffect(ID3D11Device* device, const std::wstring& filename);
-	~SDFShadowEffect();
-
+	~SDFShadowEffect();	 
+	void SetFarClipDist(const float f)                  { FarClipDist->SetFloat(f); }
+	void SetViewProj(CXMMATRIX M)						{ ViewProj->SetMatrix(reinterpret_cast<const float*>(&M)); }
+	void SetView(CXMMATRIX M)							{ View->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetViewInv(CXMMATRIX M)						{ ViewInv->SetMatrix(reinterpret_cast<const float*>(&M)); }
 	void SetEyePosW(const XMFLOAT3& v)                  { EyePosW->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
 	void SetLightDirs(const XMFLOAT3& v)                { LightDir->SetRawValue(&v, 0, sizeof(XMFLOAT3)); }
@@ -562,11 +564,12 @@ public :
 	void SetGBuffer0(ID3D11ShaderResourceView* tex)     { GBuffer0->SetResource(tex); }
 	void SetSDF0(ID3D11ShaderResourceView* tex)         { SDF0->SetResource(tex); }
 	void SetDepthMap(ID3D11ShaderResourceView* tex)     { DepthMap->SetResource(tex); }
-	void SetFrontDepthMap(ID3D11ShaderResourceView* tex){ FrontDepthMap->SetResource(tex); }
-	void SetBackDepthMap(ID3D11ShaderResourceView* tex) { BackDepthMap->SetResource(tex); }
-
+	
 	ID3DX11EffectTechnique* SDFShadowTech;
-
+	
+	ID3DX11EffectScalarVariable* FarClipDist;
+	ID3DX11EffectMatrixVariable* ViewProj;
+	ID3DX11EffectMatrixVariable* View;
 	ID3DX11EffectMatrixVariable* ViewInv;
 	ID3DX11EffectVectorVariable* LightDir;
 	ID3DX11EffectVectorVariable* EyePosW;
@@ -578,8 +581,6 @@ public :
 	ID3DX11EffectShaderResourceVariable* DepthMap;
 	ID3DX11EffectShaderResourceVariable* GBuffer0;
 	ID3DX11EffectShaderResourceVariable* SDF0;
-	ID3DX11EffectShaderResourceVariable* FrontDepthMap;
-	ID3DX11EffectShaderResourceVariable* BackDepthMap;
 };
 
 #pragma endregion

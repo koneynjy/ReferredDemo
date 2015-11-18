@@ -97,6 +97,8 @@
     <ClCompile Include="..\MeshLoader\OBJLoader.cpp" />
     <ClCompile Include="..\MeshLoader\submesh.cpp" />
     <ClCompile Include="..\MeshLoader\TGALoader.cpp" />
+    <ClCompile Include="..\SDF.cpp" />
+    <ClCompile Include="..\SDF\AsyncWork.cpp" />
     <ClCompile Include="SDFGen.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -50,25 +50,25 @@ VertexOut VS(VertexIn vin)
 	
 	return vout;
 }
-[earlydepthstencil]
+
 float4 PS(VertexOut pin) : SV_Target
 { 
-	/*uint s = gIntTexture[pin.Tex * int2(800,600)].y;
-	float sf = s / 255.0f ;
-	return sf.rrrr;*/
-	//return gTexture.Sample(samLinear, pin.Tex).rrrr;
-	float v = gSDF.Sample(samLinear, float3(pin.Tex.x, 1.0f - pin.Tex.y, d)).r;
-	if (v > 0)
-	{
-		v *= 0.5f;
-	}
-	else
-	{
-		v *= -0.5f;
-		v = 1.0f - v;
-	}
+	//uint s = gIntTexture[pin.Tex * int2(800,600)].y;
+	//float sf = s / 255.0f ;
+	//return sf.rrrr;
+	return gTexture.Sample(samLinear, pin.Tex);
+	//float v = gSDF.Sample(samLinear, float3(pin.Tex.x, 1.0f - pin.Tex.y, d)).r;
+	//if (v > 0)
+	//{
+	//	v *= 0.5f;
+	//}
+	//else
+	//{
+	//	v *= -0.5f;
+	//	v = 1.0f - v;
+	//}
 
-	return v.rrrr;
+	//return v.rrrr;
 }
 
 float4 PS(VertexOut pin, uniform int index) : SV_Target

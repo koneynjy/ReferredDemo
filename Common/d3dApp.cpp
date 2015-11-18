@@ -488,14 +488,15 @@ void D3DApp::CalculateFrameStats()
 		std::wostringstream outs;   
 		outs.precision(6);
 		outs << mMainWndCaption << L"  "
-			 << L"FPS: " << fps << L"  " 
-			 << L"FT: " << mspf << L"ms"
-			 << L"SDF: " << sdfTime << L"ms";
+			<< L"FPS: " << fps << L"  "
+			<< L"FT: " << mspf << L"ms "
+			;// << L"SDF: " << sdfTime / fps << L"ms";
 		SetWindowText(mhMainWnd, outs.str().c_str());
 		
 		// Reset for next average.
 		frameCnt = 0;
 		timeElapsed += 1.0f;
+		sdfTime = 0;
 	}
 }
 

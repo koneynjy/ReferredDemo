@@ -2,6 +2,7 @@
 #include "GeometryGenerator.h"
 #include "Vertex.h"
 #include "Effects.h"
+#include "RenderStates.h"
 
 DeferredShading::DeferredShading(ID3D11Device* device, UINT width, UINT height)
 :mWidth(width), mHeight(height), mGBufferRTV0(0), mGBufferRTV1(0), 
@@ -52,9 +53,11 @@ mGBufferSRV0(0), mGBufferSRV1(0), mDepthMapSRV(0), mDepthMapDSV(0)
 	//gbuffer
 	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
 	texDesc.BindFlags = D3D11_BIND_RENDER_TARGET | D3D11_BIND_SHADER_RESOURCE;
-	ID3D11Texture2D *rt0 = 0, *rt1 = 0;
+	ID3D11Texture2D *rt0 = 0, *rt1 = 0, *rt2;
 	HR(device->CreateTexture2D(&texDesc, 0, &rt0));
 	HR(device->CreateTexture2D(&texDesc, 0, &rt1));
+	texDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	HR(device->CreateTexture2D(&texDesc, 0, &rt2));
 
 	D3D11_RENDER_TARGET_VIEW_DESC rtvDesc;
 	rtvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -62,6 +65,8 @@ mGBufferSRV0(0), mGBufferSRV1(0), mDepthMapSRV(0), mDepthMapDSV(0)
 	rtvDesc.Texture2D.MipSlice = 0;
 	HR(device->CreateRenderTargetView(rt0, &rtvDesc, &mGBufferRTV0));
 	HR(device->CreateRenderTargetView(rt1, &rtvDesc, &mGBufferRTV1));
+	rtvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	HR(device->CreateRenderTargetView(rt2, &rtvDesc, &mLinearDepthMapRTV));
 
 	D3D11_SHADER_RESOURCE_VIEW_DESC gsrvDesc;
 	gsrvDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -70,10 +75,13 @@ mGBufferSRV0(0), mGBufferSRV1(0), mDepthMapSRV(0), mDepthMapDSV(0)
 	gsrvDesc.Texture2D.MostDetailedMip = 0;
 	HR(device->CreateShaderResourceView(rt0, &gsrvDesc, &mGBufferSRV0));
 	HR(device->CreateShaderResourceView(rt1, &gsrvDesc, &mGBufferSRV1));
+	gsrvDesc.Format = DXGI_FORMAT_R32_FLOAT;
+	HR(device->CreateShaderResourceView(rt2, &gsrvDesc, &mLinearDepthMapSRV));
 	// View saves a reference to the texture so we can release our reference.
 	ReleaseCOM(depthMap);
 	ReleaseCOM(rt0);
 	ReleaseCOM(rt1);
+	ReleaseCOM(rt2);
 }
 
 DeferredShading::~DeferredShading()
@@ -89,12 +97,15 @@ DeferredShading::~DeferredShading()
 
 void DeferredShading::SetMRT(ID3D11DeviceContext* dc){
 	dc->RSSetViewports(1, &mViewport);
-	ID3D11RenderTargetView* renderTargets[2] = { mGBufferRTV0, mGBufferRTV1};
- 	dc->OMSetRenderTargets(2, renderTargets, mDepthMapDSV);
+	ID3D11RenderTargetView* renderTargets[3] = { mGBufferRTV0, mGBufferRTV1, mLinearDepthMapRTV};
+ 	dc->OMSetRenderTargets(3, renderTargets, mDepthMapDSV);
 	FLOAT c[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+	FLOAT d[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 	dc->ClearRenderTargetView(mGBufferRTV0, c);
 	dc->ClearRenderTargetView(mGBufferRTV1, c);
+	dc->ClearRenderTargetView(mLinearDepthMapRTV, d);
 	dc->ClearDepthStencilView(mDepthMapDSV, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+	dc->OMSetDepthStencilState(RenderStates::LessDSS, 0);
 }
 
 void DeferredShading::InitQuad(Camera &camera, ID3D11Device* device)

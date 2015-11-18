@@ -17,12 +17,14 @@ public:
 
 	ID3D11ShaderResourceView* mGBufferSRV0;
 	ID3D11ShaderResourceView* mGBufferSRV1;
+	ID3D11ShaderResourceView* mLinearDepthMapSRV;
 	ID3D11ShaderResourceView* mDepthMapSRV;
 	ID3D11ShaderResourceView* mStencilMapSRV;
 
 	ID3D11RenderTargetView* mGBufferRTV0;
 	ID3D11RenderTargetView* mGBufferRTV1;
 	ID3D11DepthStencilView* mDepthMapDSV;
+	ID3D11RenderTargetView* mLinearDepthMapRTV;
 
 	ID3D11Buffer* mVB;
 	ID3D11Buffer* mIB;

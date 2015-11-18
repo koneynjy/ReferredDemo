@@ -52,14 +52,19 @@ public:
 
 	//FDistanceFieldVolumeTexture VolumeTexture;
 
-	FDistanceFieldVolumeData() :
+	FDistanceFieldVolumeData(FBox & MeshBounds) :
 		Size(FIntVector(0, 0, 0))
 		, LocalBoundingBox(0)
 		, bMeshWasClosed(true)
 		, bBuiltAsIfTwoSided(false)
 		, bMeshWasPlane(false)
 		//,VolumeTexture(*this)
-	{}
+	{
+		const float MaxOriginalExtent = MeshBounds.GetExtent().GetMax();
+		// Expand so that the edges of the volume are guaranteed to be outside of the mesh
+		const FVector NewExtent(MeshBounds.GetExtent() + FVector(.2f * MaxOriginalExtent));
+		LocalBoundingBox = FBox(MeshBounds.GetCenter() - NewExtent, MeshBounds.GetCenter() + NewExtent);
+	}
 
 	SIZE_t GetResourceSize() const
 	{

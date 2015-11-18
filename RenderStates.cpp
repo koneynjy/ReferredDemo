@@ -13,7 +13,9 @@ ID3D11RasterizerState*   RenderStates::CullFrontRS		 = 0;
 ID3D11DepthStencilState* RenderStates::EqualsDSS         = 0;
 ID3D11DepthStencilState* RenderStates::NoDepth			 = 0;
 ID3D11DepthStencilState* RenderStates::LessDSS			 = 0;
-ID3D11DepthStencilState* RenderStates::SSRDSS  = 0;
+ID3D11DepthStencilState* RenderStates::SSRDSS			 = 0;
+ID3D11DepthStencilState* RenderStates::CullFrontDSS		 = 0;
+ID3D11DepthStencilState* RenderStates::CullBackDSS		 = 0;
 
 ID3D11BlendState*        RenderStates::AlphaToCoverageBS = 0;
 ID3D11BlendState*        RenderStates::TransparentBS     = 0;
@@ -78,7 +80,7 @@ void RenderStates::InitAll(ID3D11Device* device)
 	ZeroMemory(&lessDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
 	lessDesc.DepthEnable = true;
 	lessDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ALL;
-	lessDesc.DepthFunc = D3D11_COMPARISON_LESS;
+	lessDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
 	lessDesc.StencilEnable = true;
 	lessDesc.StencilReadMask = 0xff;
 	lessDesc.StencilWriteMask = 0xff;
@@ -149,6 +151,43 @@ void RenderStates::InitAll(ID3D11Device* device)
 	transparentDesc.RenderTarget[0].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
 
 	HR(device->CreateBlendState(&transparentDesc, &TransparentBS));
+
+
+	D3D11_DEPTH_STENCIL_DESC cfDesc;
+	ZeroMemory(&cfDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	cfDesc.DepthEnable = true;
+	cfDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	cfDesc.DepthFunc = D3D11_COMPARISON_GREATER_EQUAL;
+	cfDesc.StencilEnable = true;
+	cfDesc.StencilReadMask = 0xff;
+	cfDesc.StencilWriteMask = 0xff;
+	cfDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	cfDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	cfDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	cfDesc.FrontFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	cfDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	cfDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	cfDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	cfDesc.BackFace.StencilFunc = D3D11_COMPARISON_ALWAYS;
+	HR(device->CreateDepthStencilState(&cfDesc, &CullFrontDSS));
+
+	D3D11_DEPTH_STENCIL_DESC cbDesc;
+	ZeroMemory(&cbDesc, sizeof(D3D11_DEPTH_STENCIL_DESC));
+	cbDesc.DepthEnable = true;
+	cbDesc.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+	cbDesc.DepthFunc = D3D11_COMPARISON_LESS_EQUAL;
+	cbDesc.StencilEnable = true;
+	cbDesc.StencilReadMask = 0xff;
+	cbDesc.StencilWriteMask = 0xff;
+	cbDesc.FrontFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	cbDesc.FrontFace.StencilDepthFailOp = D3D11_STENCIL_OP_ZERO;
+	cbDesc.FrontFace.StencilPassOp = D3D11_STENCIL_OP_KEEP;
+	cbDesc.FrontFace.StencilFunc = D3D11_COMPARISON_EQUAL;
+	cbDesc.BackFace.StencilFailOp = D3D11_STENCIL_OP_KEEP;
+	cbDesc.BackFace.StencilDepthFailOp = D3D11_STENCIL_OP_KEEP;
+	cbDesc.BackFace.StencilPassOp = D3D11_STENCIL_OP_REPLACE;
+	cbDesc.BackFace.StencilFunc = D3D11_COMPARISON_NEVER;
+	HR(device->CreateDepthStencilState(&cbDesc, &CullBackDSS));
 }
 
 void RenderStates::DestroyAll()
