@@ -8,8 +8,8 @@ texture2D gPreBuffer;
 cbuffer cbPerFrame
 {
 	float4x4 gViewProj;
-	float4x4 gView;
-	float4x4 gViewInv;
+	float4x4 gView;	//deprecated
+	float4x4 gViewInv; //deprecated
 	float3 gLightDir;
 	float3 gEyePosW;
 	float  gFarClipDist;
@@ -30,6 +30,52 @@ SamplerState samLinear
 	AddressW = CLAMP;
 };
 
+RasterizerState	cullFront
+{
+	CullMode = FRONT;
+};
+
+RasterizerState	cullBack
+{
+	CullMode = Back;
+};
+
+DepthStencilState cfDSS
+{
+	DepthEnable = true;
+	DepthWriteMask = ZERO;
+	DepthFunc = GREATER_EQUAL;
+	StencilEnable = true;
+	StencilReadMask = 0xff;
+	StencilWriteMask = 0xff;
+	FrontFaceStencilFail = KEEP;
+	FrontFaceStencilDepthFail = KEEP;
+	FrontFaceStencilPass = REPLACE;
+	FrontFaceStencilFunc = ALWAYS;
+	BackFaceStencilFail = KEEP;
+	BackFaceStencilDepthFail = KEEP;
+	BackFaceStencilPass = REPLACE;
+	BackFaceStencilFunc = ALWAYS;
+};
+
+DepthStencilState cbDSS
+{
+	DepthEnable = true;
+	DepthWriteMask = ZERO;
+	DepthFunc = LESS_EQUAL;
+	StencilEnable = true;
+	StencilReadMask = 0xff;
+	StencilWriteMask = 0xff;
+	FrontFaceStencilFail = KEEP;
+	FrontFaceStencilDepthFail = ZERO;
+	FrontFaceStencilPass = KEEP;
+	FrontFaceStencilFunc = EQUAL;
+	BackFaceStencilFail = KEEP;
+	BackFaceStencilDepthFail = KEEP;
+	BackFaceStencilPass = REPLACE;
+	BackFaceStencilFunc = NEVER;
+};
+
 struct VertexIn
 {
 	float3 PosH		: POSITION;
@@ -42,6 +88,12 @@ struct VertexOut
 	float2 uv			: POSITION1;
 	float z				: TEXCOORD0;
 };
+
+void CullVS(float3 posH: POSITION
+	, out float4 pos : SV_POSITION)
+{
+	pos = mul(float4(posH, 1.0f), gViewProj);
+}
 
 uniform float3 zero = float3(-1e-4f, -1e-4f, -1e-4f);
 
@@ -145,8 +197,8 @@ bool IntersectBoundsCull(float3 start, float3 dir, float3 bounds,
 VertexOut VS(VertexIn vin)
 {
 	VertexOut vout;
-	vout.viewDirW = mul(float4(vin.PosH,1.0f), gView).xyz;
-	vout.viewDirW = mul(vout.viewDirW, (float3x3)gViewInv);//transform view space point to World vector
+	vout.viewDirW = vin.PosH - gEyePosW;//mul(float4(vin.PosH,1.0f), gView).xyz;
+	//vout.viewDirW = mul(vout.viewDirW, (float3x3)gViewInv);//transform view space point to World vector
 	//vin.PosH.xy /= abs(vin.PosH.xy);//to -1 ~ 1
 	vout.PosH = mul(float4(vin.PosH, 1.0f), gViewProj);
 	vout.uv = vout.PosH.xy;
@@ -180,7 +232,7 @@ float4 PS(VertexOut pin) : SV_Target
 	float3 i1 = float3(0,0,0), i2;
 	float length = 0, len = 0;
 	float4 shadow = float4(1.0f, 0, 0, 0);
-	float boundMax = max(gSDFBounds0.x, max(gSDFBounds0.y, gSDFBounds0.z)) * 0.5f;
+	float boundMax = gSDFRes0;//max(gSDFBounds0.x, max(gSDFBounds0.y, gSDFBounds0.z)) * 0.5f;
 	float minstep;
 #ifdef CULLING
 	IntersectBoundsCull(posSDF, dir, gSDFBounds0, i1, length);
@@ -233,13 +285,23 @@ float4 PS(VertexOut pin) : SV_Target
 	return shadow;
 }
 
-technique SDFShadowTech
+technique11 SDFShadowTech
 {
 	pass P0
 	{
-		SetVertexShader(CompileShader(vs_3_0, VS()));
-		//SetGeometryShader(NULL);
-		SetPixelShader(CompileShader(ps_3_0, PS()));
+		SetRasterizerState(cullFront);
+		SetDepthStencilState(cfDSS, 0xff);
+		SetVertexShader(CompileShader(vs_5_0, CullVS()));
+		SetGeometryShader(NULL);
+		SetPixelShader(NULL);
+	}
+	pass P1
+	{
+		SetRasterizerState(cullBack);
+		SetDepthStencilState(cbDSS, 0xff);
+		SetVertexShader(CompileShader(vs_5_0, VS()));
+		SetGeometryShader(NULL);
+		SetPixelShader(CompileShader(ps_5_0, PS()));
 	}
 };
 

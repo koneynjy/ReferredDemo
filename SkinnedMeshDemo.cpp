@@ -1515,7 +1515,7 @@ void SkinnedMeshApp::DeferredShadingPass()
 	//SDFShadowPass(sphereModel, mSphereSDFSRV, mSphereWorld[3]);
 	for (int i = 50; i < 51; i++)
 	{
-		SDFVolumeCulling(i);
+		//SDFVolumeCulling(i);
 		SDFShadowPass(i);
 	}
 	//SDFShadowPass(cylinderModel, mCylinderSDFSRV, mCylWorld[3]);
@@ -1622,20 +1622,13 @@ void SkinnedMeshApp::SDFShadowPass(UINT idx)
 {
 	SDFModel* sdfModel = mObjSDF[idx];
 	XMFLOAT4X4 worldMat = mObjModelMat[idx];
-	XMMATRIX viewInv;
 	///////////////////////////g pass////////////////////////////////
-	viewInv.r[0] = mCam.GetRightXM();
-	viewInv.r[1] = mCam.GetUpXM();
-	viewInv.r[2] = mCam.GetLookXM();
-	XMMATRIX view = mCam.View();
 	XMMATRIX viewProj = mCam.ViewProj();
 	mSDFShadow->SetRenderTarget(md3dImmediateContext, mDeferred->mDepthMapDSV);
-	md3dImmediateContext->RSSetState(RenderStates::CullBackRS);
-	md3dImmediateContext->OMSetDepthStencilState(RenderStates::CullBackDSS, 0xff);
+	//md3dImmediateContext->RSSetState(RenderStates::CullBackRS);
+	//md3dImmediateContext->OMSetDepthStencilState(RenderStates::CullBackDSS, 0xff);
 	Effects::SDFShadowFX->SetFarClipDist(mCam.GetFarZ());
 	Effects::SDFShadowFX->SetViewProj(viewProj);
-	Effects::SDFShadowFX->SetView(view);
-	Effects::SDFShadowFX->SetViewInv(viewInv);
 	Effects::SDFShadowFX->SetEyePosW(mCam.GetPosition());
 	
 	XMFLOAT3 origin = sdfModel->GetOrigin();
@@ -1657,6 +1650,7 @@ void SkinnedMeshApp::SDFShadowPass(UINT idx)
 	Effects::SDFShadowFX->SetGBuffer0(mDeferred->mGBufferSRV0);
 	Effects::SDFShadowFX->SetDepthMap(mDeferred->mLinearDepthMapSRV);
 	Effects::SDFShadowFX->SetSDF0(mObjSDFSRV[idx]);
+	Effects::SDFShadowFX->SetSDFRes0(max(extends.x, max(extends.x, extends.y)));
 	UINT stride = sizeof(XMFLOAT3);
 	UINT offset = 0;
 	md3dImmediateContext->IASetVertexBuffers(0, 1, &mObjCullingVolumeVB[idx], &stride, &offset);
